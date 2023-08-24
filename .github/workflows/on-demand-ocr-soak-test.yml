@@ -21,7 +21,9 @@ on:
           - "SCROLL_SEPOLIA"
           - "SCROLL_MAINNET"
           - "MUMBAI"
-          - "POLYGON_MAINNET"   
+          - "POLYGON_MAINNET"
+          - "POLYGON_ZKEVM_GOERLI"
+          - "POLYGON_ZKEVM_MAINNET"   
       fundingPrivateKey:
         description: Private funding key (Skip for Simulated)
         required: false
