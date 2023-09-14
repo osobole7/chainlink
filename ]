@@ -1,0 +1,118 @@
+package llo
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+
+	"github.com/smartcontractkit/chainlink/v2/core/logger"
+	"github.com/smartcontractkit/chainlink/v2/core/services/pipeline"
+)
+
+type Runner interface {
+	ExecuteRun(ctx context.Context, spec pipeline.Spec, vars pipeline.Vars, l logger.Logger) (run *pipeline.Run, trrs pipeline.TaskRunResults, err error)
+}
+
+// TODO: Generalize to beyond simply an int
+type DataPoint *big.Int
+
+type Stream interface {
+	Observe(ctx context.Context) (DataPoint, error)
+}
+
+type stream struct {
+	id         string
+	lggr       logger.Logger
+	runResults chan<- *pipeline.Run
+	spec       pipeline.Spec
+	runner     Runner
+}
+
+func NewStream(lggr logger.Logger, id string, runResults chan<- *pipeline.Run, pipelineSpec pipeline.Spec, pipelineRunner Runner) Stream {
+	return newStream(lggr, id, runResults, pipelineSpec, pipelineRunner)
+}
+
+func newStream(lggr logger.Logger, id string, runResults chan<- *pipeline.Run, pipelineSpec pipeline.Spec, pipelineRunner Runner) *stream {
+	return &stream{id, lggr, runResults, pipelineSpec, pipelineRunner}
+}
+
+func (s *stream) Observe(ctx context.Context) (DataPoint, error) {
+	var run *pipeline.Run
+	run, trrs, err := s.executeRun(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Observe failed while executing run: %w", err)
+	}
+	select {
+	case s.runResults <- run:
+	default:
+		s.lggr.Warnf("unable to enqueue run save for job ID %d, buffer full", s.spec.JobID)
+	}
+
+	// NOTE: trrs comes back as _all_ tasks, but we only want the terminal ones
+	// They are guaranteed to be sorted by index asc so should be in the correct order
+	var finaltrrs []pipeline.TaskRunResult
+	for _, trr := range trrs {
+		if trr.IsTerminal() {
+			finaltrrs = append(finaltrrs, trr)
+		}
+	}
+
+	// FIXME: How to handle arbitrary-shaped inputs?
+	// For now just assume everything is one *big.Int
+	var parsed parseOutput
+	parsed, pipelineExecutionErr = ds.parse(finaltrrs)
+	if pipelineExecutionErr != nil {
+		pipelineExecutionErr = fmt.Errorf("Observe failed while parsing run results: %w", pipelineExecutionErr)
+		return
+	}
+	obs.BenchmarkPrice = parsed.benchmarkPrice
+	obs.Bid = parsed.bid
+	obs.Ask = parsed.ask
+
+}
+
+// The context passed in here has a timeout of (ObservationTimeout + ObservationGracePeriod).
+// Upon context cancellation, its expected that we return any usable values within ObservationGracePeriod.
+func (s *stream) executeRun(ctx context.Context) (*pipeline.Run, pipeline.TaskRunResults, error) {
+	vars := pipeline.NewVarsFrom(map[string]interface{}{
+		"jb": map[string]interface{}{
+			"databaseID":    ds.jb.ID,
+			"externalJobID": ds.jb.ExternalJobID,
+			"name":          ds.jb.Name.ValueOrZero(),
+		},
+	})
+
+	run, trrs, err := ds.pipelineRunner.ExecuteRun(ctx, ds.spec, vars, ds.lggr)
+	if err != nil {
+		return nil, nil, pkgerrors.Wrapf(err, "error executing run for spec ID %v", ds.spec.ID)
+	}
+
+	return run, trrs, err
+}
+
+// returns error on parse errors: if something is the wrong type
+func (ds *datasource) parse(trrs pipeline.TaskRunResults) (*big.Int, error) {
+	var finaltrrs []pipeline.TaskRunResult
+	for _, trr := range trrs {
+		// only return terminal trrs from executeRun
+		if trr.IsTerminal() {
+			finaltrrs = append(finaltrrs, trr)
+		}
+	}
+
+	// pipeline.TaskRunResults comes ordered asc by index, this is guaranteed
+	// by the pipeline executor
+	if len(finaltrrs) != 1 {
+		return o, fmt.Errorf("invalid number of results, expected: 1, got: %d", len(finaltrrs))
+	}
+	res := finaltrrs[0].Result
+	if res.Error != nil {
+		o.benchmarkPrice.Err = res.Error
+	} else if val, err := toBigInt(res.Value); err != nil {
+		return fmt.Errorf("failed to parse BenchmarkPrice: %w", err)
+	} else {
+		o.benchmarkPrice.Val = val
+	}
+
+	return o, merr
+}

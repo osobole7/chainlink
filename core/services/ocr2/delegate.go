@@ -430,6 +430,9 @@ func (d *Delegate) ServicesForSpec(jb job.Job) ([]job.ServiceCtx, error) {
 	case types.Mercury:
 		return d.newServicesMercury(ctx, lggr, jb, runResults, bootstrapPeers, kb, ocrDB, lc, ocrLogger)
 
+	case types.LLO:
+		return d.newServicesLLO(ctx, lggr, jb, runResults, bootstrapPeers, kb, ocrDB, lc, ocrLogger)
+
 	case types.Median:
 		return d.newServicesMedian(ctx, lggr, jb, runResults, bootstrapPeers, kb, ocrDB, lc, ocrLogger)
 
@@ -709,6 +712,91 @@ func (d *Delegate) newServicesMercury(
 	chEnhancedTelem := make(chan ocrcommon.EnhancedTelemetryMercuryData, 100)
 
 	mercuryServices, err2 := mercury.NewServices(jb, mercuryProvider, d.pipelineRunner, runResults, lggr, oracleArgsNoPlugin, d.cfg.JobPipeline(), chEnhancedTelem, d.mercuryORM, (mercuryutils.FeedID)(*spec.FeedID))
+
+	if ocrcommon.ShouldCollectEnhancedTelemetryMercury(jb) {
+		enhancedTelemService := ocrcommon.NewEnhancedTelemetryService(&jb, chEnhancedTelem, make(chan struct{}), d.monitoringEndpointGen.GenMonitoringEndpoint(rid.Network, rid.ChainID, spec.FeedID.String(), synchronization.EnhancedEAMercury), lggr.Named("EnhancedTelemetryMercury"))
+		mercuryServices = append(mercuryServices, enhancedTelemService)
+	} else {
+		lggr.Infow("Enhanced telemetry is disabled for mercury job", "job", jb.Name)
+	}
+
+	return mercuryServices, err2
+}
+
+func (d *Delegate) newServicesLLO(
+	ctx context.Context,
+	lggr logger.SugaredLogger,
+	jb job.Job,
+	runResults chan *pipeline.Run,
+	bootstrapPeers []commontypes.BootstrapperLocator,
+	kb ocr2key.KeyBundle,
+	ocrDB *db,
+	lc ocrtypes.LocalConfig,
+	ocrLogger commontypes.Logger,
+) ([]job.ServiceCtx, error) {
+	spec := jb.OCR2OracleSpec
+	transmitterID := spec.TransmitterID.String
+	if len(transmitterID) != 64 {
+		return nil, errors.Errorf("ServicesForSpec: llo job type requires transmitter ID to be a 32-byte hex string, got: %q", transmitterID)
+	}
+	if _, err := hex.DecodeString(transmitterID); err != nil {
+		return nil, errors.Wrapf(err, "ServicesForSpec: llo job type requires transmitter ID to be a 32-byte hex string, got: %q", transmitterID)
+	}
+
+	rid, err := spec.RelayID()
+	if err != nil {
+		return nil, ErrJobSpecNoRelayer{Err: err, PluginName: "llo"}
+	}
+	if rid.Network != relay.EVM {
+		return nil, fmt.Errorf("llo services: expected EVM relayer got %s", rid.Network)
+	}
+	relayer, err := d.RelayGetter.Get(rid)
+	if err != nil {
+		return nil, ErrRelayNotEnabled{Err: err, Relay: spec.Relay, PluginName: "llo"}
+	}
+	chain, err := d.legacyChains.Get(rid.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("llo services: failed to get chain %s: %w", rid.ChainID, err)
+	}
+
+	provider, err2 := relayer.NewPluginProvider(ctx,
+		types.RelayArgs{
+			ExternalJobID: jb.ExternalJobID,
+			JobID:         jb.ID,
+			ContractID:    spec.ContractID,
+			New:           d.isNewlyCreatedJob,
+			RelayConfig:   spec.RelayConfig.Bytes(),
+			ProviderType:  string(spec.PluginType),
+		}, types.PluginArgs{
+			TransmitterID: transmitterID,
+			PluginConfig:  spec.PluginConfig.Bytes(),
+		})
+	if err2 != nil {
+		return nil, err2
+	}
+
+	lloProvider, ok := provider.(types.LLOProvider)
+	if !ok {
+		return nil, errors.New("could not coerce PluginProvider to LLOProvider")
+	}
+
+	oracleArgsNoPlugin := libocr2.OCR3OracleArgs{
+		// BinaryNetworkEndpointFactory: d.peerWrapper.Peer2,
+		// V2Bootstrappers:              bootstrapPeers,
+		// ContractTransmitter:          lloProvider.ContractTransmitter(),
+		// ContractConfigTracker:        lloProvider.ContractConfigTracker(),
+		// Database:                     ocrDB,
+		// LocalConfig:                  lc,
+		// Logger:                       ocrLogger,
+		// MonitoringEndpoint:           d.monitoringEndpointGen.GenMonitoringEndpoint(rid.Network, rid.ChainID, spec.FeedID.String(), synchronization.OCR3Mercury),
+		// OffchainConfigDigester:       lloProvider.OffchainConfigDigester(),
+		// OffchainKeyring:              kb,
+		// OnchainKeyring:               kb,
+	}
+
+	chEnhancedTelem := make(chan ocrcommon.EnhancedTelemetryMercuryData, 100)
+
+	mercuryServices, err2 := mercury.NewServices(jb, mercuryProvider, d.pipelineRunner, runResults, lggr, oracleArgsNoPlugin, d.cfg.JobPipeline(), chEnhancedTelem, chain, d.mercuryORM, (mercuryutils.FeedID)(*spec.FeedID))
 
 	if ocrcommon.ShouldCollectEnhancedTelemetryMercury(jb) {
 		enhancedTelemService := ocrcommon.NewEnhancedTelemetryService(&jb, chEnhancedTelem, make(chan struct{}), d.monitoringEndpointGen.GenMonitoringEndpoint(rid.Network, rid.ChainID, spec.FeedID.String(), synchronization.EnhancedEAMercury), lggr.Named("EnhancedTelemetryMercury"))
