@@ -23,6 +23,7 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/services/job"
 	"github.com/smartcontractkit/chainlink/v2/core/services/pipeline"
 	evmrelay "github.com/smartcontractkit/chainlink/v2/core/services/relay/evm"
+	"github.com/smartcontractkit/chainlink/v2/core/utils"
 )
 
 func TestORM_MostRecentFluxMonitorRoundID(t *testing.T) {
@@ -105,8 +106,7 @@ func TestORM_UpdateFluxMonitorRoundStats(t *testing.T) {
 	var roundID uint32 = 1
 
 	jb := makeJob(t)
-	err := jobORM.CreateJob(jb)
-	require.NoError(t, err)
+	require.NoError(t, jobORM.CreateJob(jb))
 
 	for expectedCount := uint64(1); expectedCount < 4; expectedCount++ {
 		f := time.Now()
@@ -162,6 +162,7 @@ func makeJob(t *testing.T) *job.Job {
 			IdleTimerDisabled: false,
 			CreatedAt:         time.Now(),
 			UpdatedAt:         time.Now(),
+			EVMChainID:        (*utils.Big)(testutils.FixtureChainID),
 		},
 	}
 }

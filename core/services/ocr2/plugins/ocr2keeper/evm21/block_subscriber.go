@@ -25,15 +25,19 @@ const (
 	channelSize = 100
 	// lookbackDepth decides valid trigger block lookback range
 	lookbackDepth = 1024
-	// blockHistorySize decides the block history size
-	blockHistorySize = int64(128)
+	// blockHistorySize decides the block history size sent to subscribers
+	blockHistorySize = int64(256)
+)
+
+var (
+	BlockSubscriberServiceName = "BlockSubscriber"
 )
 
 type BlockSubscriber struct {
-	sync             utils.StartStopOnce
+	utils.StartStopOnce
+	threadCtrl utils.ThreadControl
+
 	mu               sync.RWMutex
-	ctx              context.Context
-	cancel           context.CancelFunc
 	hb               httypes.HeadBroadcaster
 	lp               logpoller.LogPoller
 	headC            chan *evmtypes.Head
@@ -43,14 +47,17 @@ type BlockSubscriber struct {
 	maxSubId         int
 	lastClearedBlock int64
 	lastSentBlock    int64
-	latestBlock      atomic.Int64
+	latestBlock      atomic.Pointer[ocr2keepers.BlockKey]
 	blockHistorySize int64
 	blockSize        int64
 	lggr             logger.Logger
 }
 
+var _ ocr2keepers.BlockSubscriber = &BlockSubscriber{}
+
 func NewBlockSubscriber(hb httypes.HeadBroadcaster, lp logpoller.LogPoller, lggr logger.Logger) *BlockSubscriber {
 	return &BlockSubscriber{
+		threadCtrl:       utils.NewThreadControl(),
 		hb:               hb,
 		lp:               lp,
 		headC:            make(chan *evmtypes.Head, channelSize),
@@ -58,7 +65,7 @@ func NewBlockSubscriber(hb httypes.HeadBroadcaster, lp logpoller.LogPoller, lggr
 		blocks:           map[int64]string{},
 		blockHistorySize: blockHistorySize,
 		blockSize:        lookbackDepth,
-		latestBlock:      atomic.Int64{},
+		latestBlock:      atomic.Pointer[ocr2keepers.BlockKey]{},
 		lggr:             lggr.Named("BlockSubscriber"),
 	}
 }
@@ -79,8 +86,8 @@ func (bs *BlockSubscriber) getBlockRange(ctx context.Context) ([]uint64, error) 
 	return blocks, nil
 }
 
-func (bs *BlockSubscriber) initializeBlocks(blocks []uint64) error {
-	logpollerBlocks, err := bs.lp.GetBlocksRange(bs.ctx, blocks, pg.WithParentCtx(bs.ctx))
+func (bs *BlockSubscriber) initializeBlocks(ctx context.Context, blocks []uint64) error {
+	logpollerBlocks, err := bs.lp.GetBlocksRange(ctx, blocks)
 	if err != nil {
 		return err
 	}
@@ -125,68 +132,61 @@ func (bs *BlockSubscriber) cleanup() {
 	bs.lggr.Infof("lastClearedBlock is set to %d", bs.lastClearedBlock)
 }
 
+func (bs *BlockSubscriber) initialize(ctx context.Context) {
+	bs.mu.Lock()
+	defer bs.mu.Unlock()
+	// initialize the blocks map with the recent blockSize blocks
+	blocks, err := bs.getBlockRange(ctx)
+	if err != nil {
+		bs.lggr.Errorf("failed to get block range", err)
+	}
+	err = bs.initializeBlocks(ctx, blocks)
+	if err != nil {
+		bs.lggr.Errorf("failed to get log poller blocks", err)
+	}
+	_, bs.unsubscribe = bs.hb.Subscribe(&headWrapper{headC: bs.headC, lggr: bs.lggr})
+}
+
 func (bs *BlockSubscriber) Start(ctx context.Context) error {
-	bs.lggr.Info("block subscriber started.")
-	return bs.sync.StartOnce("BlockSubscriber", func() error {
-		bs.mu.Lock()
-		defer bs.mu.Unlock()
-		// TODO: we should use ctx instead of context.Background())
-		bs.ctx, bs.cancel = context.WithCancel(context.Background())
-		// initialize the blocks map with the recent blockSize blocks
-		blocks, err := bs.getBlockRange(bs.ctx)
-		if err != nil {
-			bs.lggr.Errorf("failed to get block range", err)
-		}
-		err = bs.initializeBlocks(blocks)
-		if err != nil {
-			bs.lggr.Errorf("failed to get log poller blocks", err)
-		}
-
-		_, bs.unsubscribe = bs.hb.Subscribe(&headWrapper{headC: bs.headC, lggr: bs.lggr})
-
+	return bs.StartOnce(BlockSubscriberServiceName, func() error {
+		bs.lggr.Info("block subscriber started.")
+		bs.initialize(ctx)
 		// poll from head broadcaster channel and push to subscribers
-		{
-			go func(ctx context.Context) {
-				for {
-					select {
-					case h := <-bs.headC:
-						if h != nil {
-							bs.processHead(h)
-						}
-					case <-ctx.Done():
-						return
+		bs.threadCtrl.Go(func(ctx context.Context) {
+			for {
+				select {
+				case h := <-bs.headC:
+					if h != nil {
+						bs.processHead(h)
 					}
+				case <-ctx.Done():
+					return
 				}
-			}(bs.ctx)
-		}
+			}
+		})
+		// cleanup old blocks
+		bs.threadCtrl.Go(func(ctx context.Context) {
+			ticker := time.NewTicker(cleanUpInterval)
+			defer ticker.Stop()
 
-		// clean up block maps
-		{
-			go func(ctx context.Context) {
-				ticker := time.NewTicker(cleanUpInterval)
-				for {
-					select {
-					case <-ticker.C:
-						bs.cleanup()
-					case <-ctx.Done():
-						ticker.Stop()
-						return
-					}
+			for {
+				select {
+				case <-ticker.C:
+					bs.cleanup()
+				case <-ctx.Done():
+					return
 				}
-			}(bs.ctx)
-		}
+			}
+		})
 
 		return nil
 	})
 }
 
 func (bs *BlockSubscriber) Close() error {
-	bs.lggr.Info("stop block subscriber")
-	return bs.sync.StopOnce("BlockSubscriber", func() error {
-		bs.mu.Lock()
-		defer bs.mu.Unlock()
-
-		bs.cancel()
+	return bs.StopOnce(BlockSubscriberServiceName, func() error {
+		bs.lggr.Info("stop block subscriber")
+		bs.threadCtrl.Close()
 		bs.unsubscribe()
 		return nil
 	})
@@ -226,9 +226,15 @@ func (bs *BlockSubscriber) processHead(h *evmtypes.Head) {
 	// head parent is a linked list with EVM finality depth
 	// when re-org happens, new heads will have pointers to the new blocks
 	i := int64(0)
-	for cp := h; cp != nil; cp = cp.Parent {
-		if cp != h && bs.blocks[cp.Number] != cp.Hash.Hex() {
-			bs.lggr.Warnf("overriding block %d old hash %s with new hash %s due to re-org", cp.Number, bs.blocks[cp.Number], cp.Hash.Hex())
+	for cp := h; ; cp = cp.Parent {
+		if cp == nil || bs.blocks[cp.Number] == cp.Hash.Hex() {
+			break
+		}
+		existingHash, ok := bs.blocks[cp.Number]
+		if !ok {
+			bs.lggr.Debugf("filling block %d with new hash %s", cp.Number, cp.Hash.Hex())
+		} else if existingHash != cp.Hash.Hex() {
+			bs.lggr.Warnf("overriding block %d old hash %s with new hash %s due to re-org", cp.Number, existingHash, cp.Hash.Hex())
 		}
 		bs.blocks[cp.Number] = cp.Hash.Hex()
 		i++
@@ -239,8 +245,11 @@ func (bs *BlockSubscriber) processHead(h *evmtypes.Head) {
 	bs.lggr.Debugf("blocks block %d hash is %s", h.Number, h.Hash.Hex())
 
 	history := bs.buildHistory(h.Number)
-
-	bs.latestBlock.Store(h.Number)
+	block := &ocr2keepers.BlockKey{
+		Number: ocr2keepers.BlockNumber(h.Number),
+	}
+	copy(block.Hash[:], h.Hash[:])
+	bs.latestBlock.Store(block)
 	bs.lastSentBlock = h.Number
 	// send history to all subscribers
 	for _, subC := range bs.subscribers {

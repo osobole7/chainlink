@@ -57,7 +57,7 @@ func TestDelegate_ServicesForSpec(t *testing.T) {
 	})
 
 	t.Run("Spec with DirectRequestSpec", func(t *testing.T) {
-		spec := job.Job{DirectRequestSpec: &job.DirectRequestSpec{}, PipelineSpec: &pipeline.Spec{}}
+		spec := job.Job{DirectRequestSpec: &job.DirectRequestSpec{EVMChainID: (*utils.Big)(testutils.FixtureChainID)}, PipelineSpec: &pipeline.Spec{}}
 		services, err := delegate.ServicesForSpec(spec)
 		require.NoError(t, err)
 		assert.Len(t, services, 1)
@@ -97,8 +97,7 @@ func NewDirectRequestUniverseWithConfig(t *testing.T, cfg chainlink.GeneralConfi
 	if specF != nil {
 		specF(jb)
 	}
-	err := jobORM.CreateJob(jb)
-	require.NoError(t, err)
+	require.NoError(t, jobORM.CreateJob(jb))
 	serviceArray, err := delegate.ServicesForSpec(*jb)
 	require.NoError(t, err)
 	assert.Len(t, serviceArray, 1)
@@ -144,6 +143,7 @@ func TestDelegate_ServicesListenerHandleLog(t *testing.T) {
 		log.On("ReceiptsRoot").Return(common.Hash{})
 		log.On("TransactionsRoot").Return(common.Hash{})
 		log.On("StateRoot").Return(common.Hash{})
+		log.On("EVMChainID").Return(*big.NewInt(0))
 
 		uni.logBroadcaster.On("WasAlreadyConsumed", mock.Anything, mock.Anything).Return(false, nil)
 		logOracleRequest := operator_wrapper.OperatorOracleRequest{
@@ -204,6 +204,7 @@ func TestDelegate_ServicesListenerHandleLog(t *testing.T) {
 		}).Maybe()
 		log.On("DecodedLog").Return(&logOracleRequest).Maybe()
 		log.On("String").Return("")
+		log.On("EVMChainID").Return(*big.NewInt(0))
 		uni.logBroadcaster.On("MarkConsumed", mock.Anything, mock.Anything).Return(nil).Maybe()
 
 		err := uni.service.Start(testutils.Context(t))
@@ -296,6 +297,7 @@ func TestDelegate_ServicesListenerHandleLog(t *testing.T) {
 		runLog.On("ReceiptsRoot").Return(common.Hash{})
 		runLog.On("TransactionsRoot").Return(common.Hash{})
 		runLog.On("StateRoot").Return(common.Hash{})
+		runLog.On("EVMChainID").Return(*big.NewInt(0))
 
 		uni.logBroadcaster.On("WasAlreadyConsumed", mock.Anything, mock.Anything).Return(false, nil)
 		logOracleRequest := operator_wrapper.OperatorOracleRequest{
@@ -365,6 +367,7 @@ func TestDelegate_ServicesListenerHandleLog(t *testing.T) {
 		log.On("ReceiptsRoot").Return(common.Hash{})
 		log.On("TransactionsRoot").Return(common.Hash{})
 		log.On("StateRoot").Return(common.Hash{})
+		log.On("EVMChainID").Return(*big.NewInt(0))
 
 		uni.logBroadcaster.On("WasAlreadyConsumed", mock.Anything, mock.Anything).Return(false, nil)
 		logOracleRequest := operator_wrapper.OperatorOracleRequest{
@@ -457,6 +460,7 @@ func TestDelegate_ServicesListenerHandleLog(t *testing.T) {
 		log.On("ReceiptsRoot").Return(common.Hash{})
 		log.On("TransactionsRoot").Return(common.Hash{})
 		log.On("StateRoot").Return(common.Hash{})
+		log.On("EVMChainID").Return(*big.NewInt(0))
 
 		uni.logBroadcaster.On("WasAlreadyConsumed", mock.Anything, mock.Anything).Return(false, nil)
 		logOracleRequest := operator_wrapper.OperatorOracleRequest{

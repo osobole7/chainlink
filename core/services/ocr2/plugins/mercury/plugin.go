@@ -18,6 +18,7 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/services/ocrcommon"
 	"github.com/smartcontractkit/chainlink/v2/core/services/pipeline"
 	"github.com/smartcontractkit/chainlink/v2/core/services/relay/evm/mercury/types"
+	"github.com/smartcontractkit/chainlink/v2/core/services/relay/evm/mercury/utils"
 	mercuryv1 "github.com/smartcontractkit/chainlink/v2/core/services/relay/evm/mercury/v1"
 	mercuryv2 "github.com/smartcontractkit/chainlink/v2/core/services/relay/evm/mercury/v2"
 	mercuryv3 "github.com/smartcontractkit/chainlink/v2/core/services/relay/evm/mercury/v3"
@@ -38,7 +39,7 @@ func NewServices(
 	chEnhancedTelem chan ocrcommon.EnhancedTelemetryMercuryData,
 	chainHeadTracker types.ChainHeadTracker,
 	orm types.DataSourceORM,
-	feedID types.FeedID,
+	feedID utils.FeedID,
 ) ([]job.ServiceCtx, error) {
 	if jb.PipelineSpec == nil {
 		return nil, errors.New("expected job to have a non-nil PipelineSpec")
@@ -66,7 +67,7 @@ func NewServices(
 			runResults,
 			chEnhancedTelem,
 			chainHeadTracker,
-			ocr2Provider.ContractTransmitter(),
+			ocr2Provider.MercuryServerFetcher(),
 			pluginConfig.InitialBlockNumber.Ptr(),
 			feedID,
 		)
@@ -78,7 +79,7 @@ func NewServices(
 		)
 	case 2:
 		ds := mercuryv2.NewDataSource(
-			// TODO: Needs ORM to carry timestamps over
+			orm,
 			pipelineRunner,
 			jb,
 			*jb.PipelineSpec,
@@ -86,7 +87,7 @@ func NewServices(
 			lggr,
 			runResults,
 			chEnhancedTelem,
-			ocr2Provider.ContractTransmitter(),
+			ocr2Provider.MercuryServerFetcher(),
 			*pluginConfig.LinkFeedID,
 			*pluginConfig.NativeFeedID,
 		)
@@ -98,6 +99,7 @@ func NewServices(
 		)
 	case 3:
 		ds := mercuryv3.NewDataSource(
+			orm,
 			pipelineRunner,
 			jb,
 			*jb.PipelineSpec,
@@ -105,7 +107,7 @@ func NewServices(
 			lggr,
 			runResults,
 			chEnhancedTelem,
-			ocr2Provider.ContractTransmitter(),
+			ocr2Provider.MercuryServerFetcher(),
 			*pluginConfig.LinkFeedID,
 			*pluginConfig.NativeFeedID,
 		)

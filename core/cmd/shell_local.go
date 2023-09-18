@@ -294,7 +294,10 @@ func (s *Shell) runNode(c *cli.Context) error {
 
 	err := s.Config.Validate()
 	if err != nil {
-		return errors.Wrap(err, "config validation failed")
+		if err.Error() != "invalid secrets: Database.AllowSimplePasswords: invalid value (true): insecure configs are not allowed on secure builds" {
+			return errors.Wrap(err, "config validation failed")
+		}
+		lggr.Errorf("Notification for upcoming configuration change: %v", err)
 	}
 
 	lggr.Infow(fmt.Sprintf("Starting Chainlink Node %s at commit %s", static.Version, static.Sha), "Version", static.Version, "SHA", static.Sha)
@@ -371,18 +374,6 @@ func (s *Shell) runNode(c *cli.Context) error {
 	}
 
 	legacyEVMChains := app.GetRelayers().LegacyEVMChains()
-
-	// By passing in a function we can be lazy trying to look up a default
-	// chain - if there are no existing keys, there is no need to check for
-	// a chain ID
-	DefaultEVMChainIDFunc := func() (*big.Int, error) {
-		def, err2 := legacyEVMChains.Default()
-		if err2 != nil {
-			return nil, errors.Wrap(err2, "cannot get default EVM chain ID; no default EVM chain available")
-		}
-		return def.ID(), nil
-	}
-	err = keyStore.Migrate(s.Config.Password().VRF(), DefaultEVMChainIDFunc)
 
 	if s.Config.EVMEnabled() {
 		if err != nil {
@@ -634,7 +625,10 @@ func (s *Shell) RebroadcastTransactions(c *cli.Context) (err error) {
 
 	err = s.Config.Validate()
 	if err != nil {
-		return s.errorOut(fmt.Errorf("error validating configuration: %+v", err))
+		if err.Error() != "invalid secrets: Database.AllowSimplePasswords: invalid value (true): insecure configs are not allowed on secure builds" {
+			return s.errorOut(fmt.Errorf("error validating configuration: %+v", err))
+		}
+		lggr.Errorf("Notification for required upcoming configuration change: %v", err)
 	}
 
 	err = keyStore.Unlock(s.Config.Password().Keystore())

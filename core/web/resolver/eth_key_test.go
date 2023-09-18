@@ -14,7 +14,8 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm/config"
 	mocks2 "github.com/smartcontractkit/chainlink/v2/core/chains/evm/config/mocks"
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm/config/toml"
-	"github.com/smartcontractkit/chainlink/v2/core/internal/testutils/evmtest"
+	configtest "github.com/smartcontractkit/chainlink/v2/core/internal/testutils/configtest/v2"
+
 	"github.com/smartcontractkit/chainlink/v2/core/services/keystore/keys/ethkey"
 	evmrelay "github.com/smartcontractkit/chainlink/v2/core/services/relay/evm"
 	"github.com/smartcontractkit/chainlink/v2/core/utils"
@@ -87,9 +88,9 @@ func TestResolver_ETHKeys(t *testing.T) {
 				chainID := *utils.NewBigI(12)
 				linkAddr := common.HexToAddress("0x5431F5F973781809D18643b87B44921b11355d81")
 
-				cfg := evmtest.NewTestConfigs()
+				cfg := configtest.NewGeneralConfig(t, nil)
 				m := map[string]evm.Chain{states[0].EVMChainID.String(): f.Mocks.chain}
-				legacyEVMChains := evm.NewLegacyChains(cfg, m)
+				legacyEVMChains := evm.NewLegacyChains(m, cfg.EVMConfigs())
 
 				f.Mocks.ethKs.On("GetStatesForKeys", keys).Return(states, nil)
 				f.Mocks.ethKs.On("Get", keys[0].Address.Hex()).Return(keys[0], nil)
@@ -249,7 +250,7 @@ func TestResolver_ETHKeys(t *testing.T) {
 		},
 
 		{
-			name:          "Empty set on #chainSet.Get()",
+			name:          "Empty set on legacy evm chains",
 			authenticated: true,
 			before: func(f *gqlTestFramework) {
 				states := []ethkey.State{

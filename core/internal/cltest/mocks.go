@@ -13,7 +13,6 @@ import (
 
 	"github.com/smartcontractkit/sqlx"
 
-	"github.com/smartcontractkit/chainlink/v2/core/chains"
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm"
 	evmclient "github.com/smartcontractkit/chainlink/v2/core/chains/evm/client"
 	evmmocks "github.com/smartcontractkit/chainlink/v2/core/chains/evm/mocks"
@@ -23,7 +22,6 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/logger"
 	"github.com/smartcontractkit/chainlink/v2/core/services/chainlink"
 	"github.com/smartcontractkit/chainlink/v2/core/sessions"
-	"github.com/smartcontractkit/chainlink/v2/core/utils"
 	"github.com/smartcontractkit/chainlink/v2/core/web"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -425,14 +423,11 @@ func NewLegacyChainsWithMockChain(t testing.TB, ethClient evmclient.Client, cfg 
 	ch.On("ID").Return(scopedCfg.EVM().ChainID())
 	ch.On("Config").Return(scopedCfg)
 
-	return NewLegacyChainsWithChain(t, ch, cfg)
+	return NewLegacyChainsWithChain(ch, cfg)
 
 }
 
-func NewLegacyChainsWithChain(t testing.TB, ch evm.Chain, cfg evm.AppConfig) evm.LegacyChainContainer {
-	chainNodeConfig := chains.NewConfigs[utils.Big, evmtypes.Node](cfg.EVMConfigs())
+func NewLegacyChainsWithChain(ch evm.Chain, cfg evm.AppConfig) evm.LegacyChainContainer {
 	m := map[string]evm.Chain{ch.ID().String(): ch}
-	legacyChains := evm.NewLegacyChains(chainNodeConfig, m)
-	legacyChains.SetDefault(ch)
-	return legacyChains
+	return evm.NewLegacyChains(m, cfg.EVMConfigs())
 }

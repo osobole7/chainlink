@@ -28,6 +28,7 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/internal/cltest"
 	"github.com/smartcontractkit/chainlink/v2/core/internal/cltest/heavyweight"
 	"github.com/smartcontractkit/chainlink/v2/core/internal/testutils"
+	"github.com/smartcontractkit/chainlink/v2/core/internal/testutils/evmtest"
 	"github.com/smartcontractkit/chainlink/v2/core/services/chainlink"
 	"github.com/smartcontractkit/chainlink/v2/core/services/keystore/keys/ethkey"
 	"github.com/smartcontractkit/chainlink/v2/core/services/signatures/secp256k1"
@@ -181,14 +182,12 @@ func testMultipleConsumersNeedBHS(
 	sendEth(t, ownerKey, uni.backend, vrfKey.Address, 10)
 
 	// generate n BHS keys to make sure BHS job rotates sending keys
-	var bhsKeys []ethkey.KeyV2
 	var bhsKeyAddresses []string
 	var keySpecificOverrides []toml.KeySpecific
 	var keys []interface{}
 	gasLanePriceWei := assets.GWei(10)
 	for i := 0; i < nConsumers; i++ {
 		bhsKey := cltest.MustGenerateRandomKey(t)
-		bhsKeys = append(bhsKeys, bhsKey)
 		bhsKeyAddresses = append(bhsKeyAddresses, bhsKey.Address.String())
 		keys = append(keys, bhsKey)
 		keySpecificOverrides = append(keySpecificOverrides, toml.KeySpecific{
@@ -321,7 +320,6 @@ func testMultipleConsumersNeedTrustedBHS(
 	sendEth(t, ownerKey, uni.backend, vrfKey.Address, 10)
 
 	// generate n BHS keys to make sure BHS job rotates sending keys
-	var bhsKeys []ethkey.KeyV2
 	var bhsKeyAddresses []common.Address
 	var bhsKeyAddressesStrings []string
 	var keySpecificOverrides []toml.KeySpecific
@@ -329,7 +327,6 @@ func testMultipleConsumersNeedTrustedBHS(
 	gasLanePriceWei := assets.GWei(10)
 	for i := 0; i < nConsumers; i++ {
 		bhsKey := cltest.MustGenerateRandomKey(t)
-		bhsKeys = append(bhsKeys, bhsKey)
 		bhsKeyAddressesStrings = append(bhsKeyAddressesStrings, bhsKey.Address.String())
 		bhsKeyAddresses = append(bhsKeyAddresses, bhsKey.Address)
 		keys = append(keys, bhsKey)
@@ -537,6 +534,7 @@ func testSingleConsumerHappyPathBatchFulfillment(
 		})(c, s)
 		c.EVM[0].GasEstimator.LimitDefault = ptr[uint32](5_000_000)
 		c.EVM[0].MinIncomingConfirmations = ptr[uint32](2)
+		c.EVM[0].ChainID = (*utils.Big)(testutils.SimulatedChainID)
 	})
 	app := cltest.NewApplicationWithConfigV2AndKeyOnSimulatedBlockchain(t, config, uni.backend, ownerKey, key1)
 
@@ -1620,6 +1618,7 @@ func testMaliciousConsumer(
 		c.EVM[0].GasEstimator.PriceMax = assets.GWei(1)
 		c.EVM[0].GasEstimator.PriceDefault = assets.GWei(1)
 		c.EVM[0].GasEstimator.FeeCapDefault = assets.GWei(1)
+		c.EVM[0].ChainID = (*utils.Big)(testutils.SimulatedChainID)
 	})
 	carol := uni.vrfConsumers[0]
 
@@ -1644,6 +1643,7 @@ func testMaliciousConsumer(
 		GasLanePrice:             assets.GWei(1),
 		PublicKey:                vrfkey.PublicKey.String(),
 		V2:                       true,
+		EVMChainID:               testutils.SimulatedChainID.String(),
 	}).Toml()
 	jb, err := vrfcommon.ValidatedVRFSpec(s)
 	require.NoError(t, err)
@@ -1685,7 +1685,7 @@ func testMaliciousConsumer(
 	}, testutils.WaitTimeout(t), 1*time.Second).Should(gomega.BeTrue())
 
 	// The fulfillment tx should succeed
-	ch, err := app.GetRelayers().LegacyEVMChains().Default()
+	ch, err := app.GetRelayers().LegacyEVMChains().Get(evmtest.MustGetDefaultChainID(t, config.EVMConfigs()).String())
 	require.NoError(t, err)
 	r, err := ch.Client().TransactionReceipt(testutils.Context(t), attempts[0].Hash)
 	require.NoError(t, err)
