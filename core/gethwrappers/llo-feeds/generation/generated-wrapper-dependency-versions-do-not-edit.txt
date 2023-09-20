@@ -1,4 +1,4 @@
-GETH_VERSION: 1.12.0
+GETH_VERSION: 1.12.2
 errored_verifier: ../../../contracts/solc/v0.8.16/ErroredVerifier.abi ../../../contracts/solc/v0.8.16/ErroredVerifier.bin 510d18a58bfda646be35e46491baf73041eb333a349615465b20e2b5b41c5f73
 exposed_verifier: ../../../contracts/solc/v0.8.16/ExposedVerifier.abi ../../../contracts/solc/v0.8.16/ExposedVerifier.bin 6932cea8f2738e874d3ec9e1a4231d2421704030c071d9e15dd2f7f08482c246
 fee_manager: ../../../contracts/solc/v0.8.16/FeeManager.abi ../../../contracts/solc/v0.8.16/FeeManager.bin 630d7dfa814579001a359e26d99ff9c1f76a6a6480b0140da91b9f20cc1ab8df
