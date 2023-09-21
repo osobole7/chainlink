@@ -412,11 +412,13 @@ func NewApplication(opts ApplicationOpts) (Application, error) {
 		globalLogger.Debug("Off-chain reporting v2 disabled")
 	}
 
+	healthChecker := services.NewChecker()
+
 	var lbs []utils.DependentAwaiter
 	for _, c := range legacyEVMChains.Slice() {
 		lbs = append(lbs, c.LogBroadcaster())
 	}
-	jobSpawner := job.NewSpawner(jobORM, cfg.Database(), delegates, db, globalLogger, lbs)
+	jobSpawner := job.NewSpawner(jobORM, cfg.Database(), healthChecker, delegates, db, globalLogger, lbs)
 	srvcs = append(srvcs, jobSpawner, pipelineRunner)
 
 	// We start the log poller after the job spawner
@@ -453,7 +455,6 @@ func NewApplication(opts ApplicationOpts) (Application, error) {
 		}
 	}
 
-	healthChecker := services.NewChecker()
 	for _, s := range srvcs {
 		if err := healthChecker.Register(s); err != nil {
 			return nil, err
