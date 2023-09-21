@@ -56,8 +56,6 @@ type runner struct {
 	btORM                  bridges.ORM
 	config                 Config
 	bridgeConfig           BridgeConfig
-	legacyEVMChains        evm.LegacyChainContainer
-	ethKeyStore            ETHKeyStore
 	vrfKeyStore            VRFKeyStore
 	runReaperWorker        utils.SleeperTask
 	lggr                   logger.Logger
@@ -102,14 +100,12 @@ var (
 	)
 )
 
-func NewRunner(orm ORM, btORM bridges.ORM, cfg Config, bridgeCfg BridgeConfig, legacyChains evm.LegacyChainContainer, ethks ETHKeyStore, vrfks VRFKeyStore, lggr logger.Logger, httpClient, unrestrictedHTTPClient *http.Client) *runner {
+func NewRunner(orm ORM, btORM bridges.ORM, cfg Config, bridgeCfg BridgeConfig, vrfks VRFKeyStore, lggr logger.Logger, httpClient, unrestrictedHTTPClient *http.Client) *runner {
 	r := &runner{
 		orm:                    orm,
 		btORM:                  btORM,
 		config:                 cfg,
 		bridgeConfig:           bridgeCfg,
-		legacyEVMChains:        legacyChains,
-		ethKeyStore:            ethks,
 		vrfKeyStore:            vrfks,
 		chStop:                 make(chan struct{}),
 		wgDone:                 sync.WaitGroup{},
@@ -260,27 +256,12 @@ func (r *runner) initializePipeline(run *Run) (*Pipeline, error) {
 			// must use the unrestrictedHTTPClient because some node operators
 			// may run external adapters on their own hardware
 			task.(*BridgeTask).httpClient = r.unrestrictedHTTPClient
-		case TaskTypeETHCall:
-			task.(*ETHCallTask).legacyChains = r.legacyEVMChains
-			task.(*ETHCallTask).config = r.config
-			task.(*ETHCallTask).specGasLimit = run.PipelineSpec.GasLimit
-			task.(*ETHCallTask).jobType = run.PipelineSpec.JobType
 		case TaskTypeVRF:
 			task.(*VRFTask).keyStore = r.vrfKeyStore
 		case TaskTypeVRFV2:
 			task.(*VRFTaskV2).keyStore = r.vrfKeyStore
 		case TaskTypeVRFV2Plus:
 			task.(*VRFTaskV2Plus).keyStore = r.vrfKeyStore
-		case TaskTypeEstimateGasLimit:
-			task.(*EstimateGasLimitTask).legacyChains = r.legacyEVMChains
-			task.(*EstimateGasLimitTask).specGasLimit = run.PipelineSpec.GasLimit
-			task.(*EstimateGasLimitTask).jobType = run.PipelineSpec.JobType
-		case TaskTypeETHTx:
-			task.(*ETHTxTask).keyStore = r.ethKeyStore
-			task.(*ETHTxTask).legacyChains = r.legacyEVMChains
-			task.(*ETHTxTask).specGasLimit = run.PipelineSpec.GasLimit
-			task.(*ETHTxTask).jobType = run.PipelineSpec.JobType
-			task.(*ETHTxTask).forwardingAllowed = run.PipelineSpec.ForwardingAllowed
 		default:
 		}
 	}
@@ -683,4 +664,98 @@ func (r *runner) scheduleUnfinishedRuns() {
 	} else if err != nil {
 		r.lggr.Errorw("Pipeline run init job failed", "err", err)
 	}
+}
+
+type legacyChainsRunner struct {
+	*runner
+	legacyEVMChains evm.LegacyChainContainer
+	ethKeyStore     ETHKeyStore
+}
+
+var _ Runner = (*legacyChainsRunner)(nil)
+
+func NewLegacyChainsRunner(orm ORM, btORM bridges.ORM, cfg Config, bridgeCfg BridgeConfig, legacyChains evm.LegacyChainContainer, ethks ETHKeyStore, vrfks VRFKeyStore, lggr logger.Logger, httpClient, unrestrictedHTTPClient *http.Client) *legacyChainsRunner {
+	r := &legacyChainsRunner{
+		runner: &runner{
+			orm:                    orm,
+			btORM:                  btORM,
+			config:                 cfg,
+			bridgeConfig:           bridgeCfg,
+			vrfKeyStore:            vrfks,
+			chStop:                 make(chan struct{}),
+			wgDone:                 sync.WaitGroup{},
+			runFinished:            func(*Run) {},
+			lggr:                   lggr.Named("PipelineRunner"),
+			httpClient:             httpClient,
+			unrestrictedHTTPClient: unrestrictedHTTPClient,
+		},
+		legacyEVMChains: legacyChains,
+		ethKeyStore:     ethks,
+	}
+	r.runReaperWorker = utils.NewSleeperTask(
+		utils.SleeperFuncTask(r.runReaper, "PipelineRunnerReaper"),
+	)
+	return r
+}
+
+func (r *legacyChainsRunner) initializePipeline(run *Run) (*Pipeline, error) {
+	pipeline, err := Parse(run.PipelineSpec.DotDagSource)
+	if err != nil {
+		return nil, err
+	}
+
+	// initialize certain task params
+	for _, task := range pipeline.Tasks {
+		task.Base().uuid = uuid.New()
+
+		switch task.Type() {
+		case TaskTypeHTTP:
+			task.(*HTTPTask).config = r.config
+			task.(*HTTPTask).httpClient = r.httpClient
+			task.(*HTTPTask).unrestrictedHTTPClient = r.unrestrictedHTTPClient
+		case TaskTypeBridge:
+			task.(*BridgeTask).config = r.config
+			task.(*BridgeTask).bridgeConfig = r.bridgeConfig
+			task.(*BridgeTask).orm = r.btORM
+			task.(*BridgeTask).specId = run.PipelineSpec.ID
+			// URL is "safe" because it comes from the node's own database. We
+			// must use the unrestrictedHTTPClient because some node operators
+			// may run external adapters on their own hardware
+			task.(*BridgeTask).httpClient = r.unrestrictedHTTPClient
+		case TaskTypeETHCall:
+			task.(*ETHCallTask).legacyChains = r.legacyEVMChains
+			task.(*ETHCallTask).config = r.config
+			task.(*ETHCallTask).specGasLimit = run.PipelineSpec.GasLimit
+			task.(*ETHCallTask).jobType = run.PipelineSpec.JobType
+		case TaskTypeVRF:
+			task.(*VRFTask).keyStore = r.vrfKeyStore
+		case TaskTypeVRFV2:
+			task.(*VRFTaskV2).keyStore = r.vrfKeyStore
+		case TaskTypeVRFV2Plus:
+			task.(*VRFTaskV2Plus).keyStore = r.vrfKeyStore
+		case TaskTypeEstimateGasLimit:
+			task.(*EstimateGasLimitTask).legacyChains = r.legacyEVMChains
+			task.(*EstimateGasLimitTask).specGasLimit = run.PipelineSpec.GasLimit
+			task.(*EstimateGasLimitTask).jobType = run.PipelineSpec.JobType
+		case TaskTypeETHTx:
+			task.(*ETHTxTask).keyStore = r.ethKeyStore
+			task.(*ETHTxTask).legacyChains = r.legacyEVMChains
+			task.(*ETHTxTask).specGasLimit = run.PipelineSpec.GasLimit
+			task.(*ETHTxTask).jobType = run.PipelineSpec.JobType
+			task.(*ETHTxTask).forwardingAllowed = run.PipelineSpec.ForwardingAllowed
+		default:
+		}
+	}
+
+	// retain old UUID values
+	for _, taskRun := range run.PipelineTaskRuns {
+		task := pipeline.ByDotID(taskRun.DotID)
+		if task != nil && task.Base() != nil {
+			task.Base().uuid = taskRun.ID
+		} else {
+			return nil, pkgerrors.Errorf("failed to match a pipeline task for dot ID: %v", taskRun.DotID)
+		}
+	}
+
+	return pipeline, nil
 }
