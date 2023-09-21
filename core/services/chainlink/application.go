@@ -262,15 +262,21 @@ func NewApplication(opts ApplicationOpts) (Application, error) {
 		return nil, fmt.Errorf("no evm chains found")
 	}
 
+	var jobORM job.ORM
 	var (
 		pipelineORM    = pipeline.NewORM(db, globalLogger, cfg.Database(), cfg.JobPipeline().MaxSuccessfulRuns())
 		bridgeORM      = bridges.NewORM(db, globalLogger, cfg.Database())
 		sessionORM     = sessions.NewORM(db, cfg.WebServer().SessionTimeout().Duration(), globalLogger, cfg.Database(), auditLogger)
 		mercuryORM     = mercury.NewORM(db, globalLogger, cfg.Database())
 		pipelineRunner = pipeline.NewRunner(pipelineORM, bridgeORM, cfg.JobPipeline(), cfg.WebServer(), legacyEVMChains, keyStore.Eth(), keyStore.VRF(), globalLogger, restrictedHTTPClient, unrestrictedHTTPClient)
-		jobORM         = job.NewORM(db, legacyEVMChains, pipelineORM, bridgeORM, keyStore, globalLogger, cfg.Database())
 		txmORM         = txmgr.NewTxStore(db, globalLogger, cfg.Database())
 	)
+
+	if cfg.EVMEnabled() {
+		jobORM = job.NewLegacyChainsORM(db, legacyEVMChains, pipelineORM, bridgeORM, keyStore, globalLogger, cfg.Database())
+	} else {
+		jobORM = job.NewORM(db, pipelineORM, bridgeORM, keyStore, globalLogger, cfg.Database())
+	}
 
 	for _, chain := range legacyEVMChains.Slice() {
 		chain.HeadBroadcaster().Subscribe(promReporter)

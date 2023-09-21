@@ -86,20 +86,18 @@ type ORMConfig interface {
 }
 
 type orm struct {
-	q            pg.Q
-	legacyChains evm.LegacyChainContainer
-	keyStore     keystore.Master
-	pipelineORM  pipeline.ORM
-	lggr         logger.SugaredLogger
-	cfg          pg.QConfig
-	bridgeORM    bridges.ORM
+	q           pg.Q
+	keyStore    keystore.Master
+	pipelineORM pipeline.ORM
+	lggr        logger.SugaredLogger
+	cfg         pg.QConfig
+	bridgeORM   bridges.ORM
 }
 
 var _ ORM = (*orm)(nil)
 
 func NewORM(
 	db *sqlx.DB,
-	legacyChains evm.LegacyChainContainer,
 	pipelineORM pipeline.ORM,
 	bridgeORM bridges.ORM,
 	keyStore keystore.Master, // needed to validation key properties on new job creation
@@ -108,13 +106,12 @@ func NewORM(
 ) *orm {
 	namedLogger := logger.Sugared(lggr.Named("JobORM"))
 	return &orm{
-		q:            pg.NewQ(db, namedLogger, cfg),
-		legacyChains: legacyChains,
-		keyStore:     keyStore,
-		pipelineORM:  pipelineORM,
-		bridgeORM:    bridgeORM,
-		lggr:         namedLogger,
-		cfg:          cfg,
+		q:           pg.NewQ(db, namedLogger, cfg),
+		keyStore:    keyStore,
+		pipelineORM: pipelineORM,
+		bridgeORM:   bridgeORM,
+		lggr:        namedLogger,
+		cfg:         cfg,
 	}
 }
 func (o *orm) Close() error {
@@ -705,39 +702,9 @@ func (o *orm) FindJobs(offset, limit int) (jobs []Job, count int, err error) {
 		if err != nil {
 			return err
 		}
-		for i := range jobs {
-			err = multierr.Combine(err, o.LoadEnvConfigVars(&jobs[i]))
-		}
 		return nil
 	})
 	return jobs, int(count), err
-}
-
-func (o *orm) LoadEnvConfigVars(jb *Job) error {
-	if jb.OCROracleSpec != nil {
-		ch, err := o.legacyChains.Get(jb.OCROracleSpec.EVMChainID.String())
-		if err != nil {
-			return err
-		}
-		newSpec, err := LoadEnvConfigVarsOCR(ch.Config().EVM().OCR(), ch.Config().OCR(), *jb.OCROracleSpec)
-		if err != nil {
-			return err
-		}
-		jb.OCROracleSpec = newSpec
-	} else if jb.VRFSpec != nil {
-		ch, err := o.legacyChains.Get(jb.VRFSpec.EVMChainID.String())
-		if err != nil {
-			return err
-		}
-		jb.VRFSpec = LoadEnvConfigVarsVRF(ch.Config().EVM(), *jb.VRFSpec)
-	} else if jb.DirectRequestSpec != nil {
-		ch, err := o.legacyChains.Get(jb.DirectRequestSpec.EVMChainID.String())
-		if err != nil {
-			return err
-		}
-		jb.DirectRequestSpec = LoadEnvConfigVarsDR(ch.Config().EVM(), *jb.DirectRequestSpec)
-	}
-	return nil
 }
 
 type DRSpecConfig interface {
@@ -873,7 +840,7 @@ func (o *orm) FindJobWithoutSpecErrors(id int32) (jb Job, err error) {
 		return jb, errors.Wrap(err, "FindJobWithoutSpecErrors failed")
 	}
 
-	return jb, o.LoadEnvConfigVars(&jb)
+	return jb, nil
 }
 
 // FindSpecErrorsByJobIDs returns all jobs spec errors by jobs IDs
@@ -962,7 +929,7 @@ func (o *orm) findJob(jb *Job, col string, arg interface{}, qopts ...pg.QOpt) er
 	if err != nil {
 		return errors.Wrap(err, "findJob failed")
 	}
-	return o.LoadEnvConfigVars(jb)
+	return nil
 }
 
 func (o *orm) FindJobIDsWithBridge(name string) (jids []int32, err error) {
@@ -1500,4 +1467,123 @@ func (r legacyGasStationServerSpecRow) toLegacyGasStationServerSpec() *LegacyGas
 
 func loadJobSpecErrors(tx pg.Queryer, jb *Job) error {
 	return errors.Wrapf(tx.Select(&jb.JobSpecErrors, `SELECT * FROM job_spec_errors WHERE job_id = $1`, jb.ID), "failed to load job spec errors for job %d", jb.ID)
+}
+
+type legacyChainsOrm struct {
+	*orm
+	legacyChains evm.LegacyChainContainer
+}
+
+var _ ORM = (*legacyChainsOrm)(nil)
+
+func NewLegacyChainsORM(
+	db *sqlx.DB,
+	legacyChains evm.LegacyChainContainer,
+	pipelineORM pipeline.ORM,
+	bridgeORM bridges.ORM,
+	keyStore keystore.Master, // needed to validation key properties on new job creation
+	lggr logger.Logger,
+	cfg pg.QConfig,
+) *legacyChainsOrm {
+	namedLogger := logger.Sugared(lggr.Named("JobORM"))
+	return &legacyChainsOrm{
+		orm: &orm{
+			q:           pg.NewQ(db, namedLogger, cfg),
+			keyStore:    keyStore,
+			pipelineORM: pipelineORM,
+			bridgeORM:   bridgeORM,
+			lggr:        namedLogger,
+			cfg:         cfg,
+		},
+		legacyChains: legacyChains,
+	}
+}
+
+func (o *legacyChainsOrm) LoadEnvConfigVars(jb *Job) error {
+	if jb.OCROracleSpec != nil {
+		ch, err := o.legacyChains.Get(jb.OCROracleSpec.EVMChainID.String())
+		if err != nil {
+			return err
+		}
+		newSpec, err := LoadEnvConfigVarsOCR(ch.Config().EVM().OCR(), ch.Config().OCR(), *jb.OCROracleSpec)
+		if err != nil {
+			return err
+		}
+		jb.OCROracleSpec = newSpec
+	} else if jb.VRFSpec != nil {
+		ch, err := o.legacyChains.Get(jb.VRFSpec.EVMChainID.String())
+		if err != nil {
+			return err
+		}
+		jb.VRFSpec = LoadEnvConfigVarsVRF(ch.Config().EVM(), *jb.VRFSpec)
+	} else if jb.DirectRequestSpec != nil {
+		ch, err := o.legacyChains.Get(jb.DirectRequestSpec.EVMChainID.String())
+		if err != nil {
+			return err
+		}
+		jb.DirectRequestSpec = LoadEnvConfigVarsDR(ch.Config().EVM(), *jb.DirectRequestSpec)
+	}
+	return nil
+}
+
+func (o *legacyChainsOrm) FindJobs(offset, limit int) (jobs []Job, count int, err error) {
+	jobs, count, err = o.orm.FindJobs(offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	for i := range jobs {
+		err = o.LoadEnvConfigVars(&jobs[i])
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+	return jobs, count, nil
+}
+
+func (o *legacyChainsOrm) FindJobWithoutSpecErrors(id int32) (jb Job, err error) {
+	jb, err = o.orm.FindJobWithoutSpecErrors(id)
+	if err != nil {
+		return Job{}, err
+	}
+
+	return jb, o.LoadEnvConfigVars(&jb)
+}
+
+// FindJob returns job by ID, with all relations preloaded
+func (o *legacyChainsOrm) FindJob(ctx context.Context, id int32) (jb Job, err error) {
+	err = o.findJob(&jb, "id", id, pg.WithParentCtx(ctx))
+	return
+}
+
+func (o *legacyChainsOrm) FindJobByExternalJobID(externalJobID uuid.UUID, qopts ...pg.QOpt) (jb Job, err error) {
+	err = o.findJob(&jb, "external_job_id", externalJobID, qopts...)
+	return
+}
+
+func (o *legacyChainsOrm) FindJobTx(id int32) (Job, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), o.cfg.DefaultQueryTimeout())
+	defer cancel()
+	return o.FindJob(ctx, id)
+}
+
+func (o *legacyChainsOrm) findJob(jb *Job, col string, arg interface{}, qopts ...pg.QOpt) error {
+	q := o.q.WithOpts(qopts...)
+	err := q.Transaction(func(tx pg.Queryer) error {
+		sql := fmt.Sprintf(`SELECT * FROM jobs WHERE %s = $1 LIMIT 1`, col)
+		err := tx.Get(jb, sql, arg)
+		if err != nil {
+			return errors.Wrap(err, "failed to load job")
+		}
+
+		if err = LoadAllJobTypes(tx, jb); err != nil {
+			return err
+		}
+
+		return loadJobSpecErrors(tx, jb)
+	})
+	if err != nil {
+		return errors.Wrap(err, "findJob failed")
+	}
+	return o.LoadEnvConfigVars(jb)
 }
