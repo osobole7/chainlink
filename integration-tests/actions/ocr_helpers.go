@@ -239,12 +239,12 @@ func CreateOCRJobs(
 				return fmt.Errorf("creating bridge job have failed: %w", err)
 			}
 
-			bootstrapPeers := []*client.ChainlinkClient{bootstrapNode.ChainlinkClient}
+			bootstrapPeers := []string{fmt.Sprintf("%s@%s:%d", bootstrapP2PId, bootstrapNode.InternalIP(), 6690)}
 			ocrSpec := &client.OCRTaskJobSpec{
 				ContractAddress:    ocrInstance.Address(),
 				EVMChainID:         evmChainID,
 				P2PPeerID:          nodeP2PId,
-				P2PBootstrapPeers:  bootstrapPeers,
+				P2PV2Bootstrappers: bootstrapPeers,
 				KeyBundleID:        nodeOCRKeyId,
 				TransmitterAddress: nodeTransmitterAddress,
 				ObservationSource:  client.ObservationSourceSpecBridge(bta),
@@ -304,12 +304,12 @@ func CreateOCRJobsWithForwarder(
 			err = node.MustCreateBridge(bta)
 			require.NoError(t, err, "Failed creating bridge on OCR node %d", nodeIndex+1)
 
-			bootstrapPeers := []*client.ChainlinkClient{bootstrapNode.ChainlinkClient}
+			bootstrapPeers := []string{fmt.Sprintf("%s@%s:%d", bootstrapP2PId, bootstrapNode.InternalIP(), 6690)}
 			ocrSpec := &client.OCRTaskJobSpec{
 				ContractAddress:    ocrInstance.Address(),
 				EVMChainID:         evmChainID,
 				P2PPeerID:          nodeP2PId,
-				P2PBootstrapPeers:  bootstrapPeers,
+				P2PV2Bootstrappers: bootstrapPeers,
 				KeyBundleID:        nodeOCRKeyId,
 				TransmitterAddress: nodeTransmitterAddress,
 				ObservationSource:  client.ObservationSourceSpecBridge(bta),

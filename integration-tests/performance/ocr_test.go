@@ -98,6 +98,7 @@ func setupOCRTest(t *testing.T) (testEnvironment *environment.Environment, testN
 			WsURLs:      testNetwork.URLs,
 		})
 	}
+
 	baseTOML := `[OCR]
 Enabled = true
 
