@@ -25,6 +25,7 @@ import (
 
 	txmgrcommon "github.com/smartcontractkit/chainlink/v2/common/txmgr"
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm"
+	"github.com/smartcontractkit/chainlink/v2/core/chains/evm/logpoller"
 	txm "github.com/smartcontractkit/chainlink/v2/core/chains/evm/txmgr"
 	"github.com/smartcontractkit/chainlink/v2/core/logger"
 	"github.com/smartcontractkit/chainlink/v2/core/services/job"
@@ -54,6 +55,7 @@ type Relayer struct {
 	mercuryPool      wsrpc.Pool
 	eventBroadcaster pg.EventBroadcaster
 	pgCfg            pg.QConfig
+	chainReader      relaytypes.ChainReader
 }
 
 type CSAETHKeystore interface {
@@ -190,7 +192,8 @@ func (r *Relayer) NewMercuryProvider(rargs relaytypes.RelayArgs, pargs relaytype
 	transmitter := mercury.NewTransmitter(lggr, cw.ContractConfigTracker(), client, privKey.PublicKey, rargs.JobID, *relayConfig.FeedID, r.db, r.pgCfg, transmitterCodec)
 
 	chainReader := NewChainReader(r.chain.HeadTracker())
-	return NewMercuryProvider(cw, transmitter, reportCodecV1, reportCodecV2, reportCodecV3, chainReader, lggr), nil
+	return NewMercuryProvider(cw, r.chainReader, transmitter, reportCodecV1, reportCodecV2, reportCodecV3, chainReader, lggr), nil
+
 }
 
 func (r *Relayer) NewFunctionsProvider(rargs relaytypes.RelayArgs, pargs relaytypes.PluginArgs) (relaytypes.FunctionsProvider, error) {
@@ -373,6 +376,13 @@ func newConfigProvider(lggr logger.Logger, chain evm.Chain, opts *types.RelayOpt
 	return newConfigWatcher(lggr, aggregatorAddress, contractABI, offchainConfigDigester, cp, chain, relayConfig.FromBlock, opts.New), nil
 }
 
+func newChainReader(lggr logger.Logger, rargs relaytypes.RelayArgs) (*chainReader, error) {
+
+	var lp logpoller.LogPoller // TODO: Find chain from RelayArgs, get pointer to LogPoller for that chain, handle errors
+
+	return &chainReader{lggr, lp}, nil
+}
+
 func newContractTransmitter(lggr logger.Logger, rargs relaytypes.RelayArgs, transmitterID string, configWatcher *configWatcher, ethKeystore keystore.Eth) (*contractTransmitter, error) {
 	var relayConfig types.RelayConfig
 	if err := json.Unmarshal(rargs.RelayConfig, &relayConfig); err != nil {
@@ -514,15 +524,15 @@ func (r *Relayer) NewMedianProvider(rargs relaytypes.RelayArgs, pargs relaytypes
 		return nil, err
 	}
 
-	medianContract, err := newMedianContract(configWatcher.ContractConfigTracker(), configWatcher.contractAddress, configWatcher.chain, rargs.JobID, r.db, lggr)
 	if err != nil {
 		return nil, err
 	}
+	chainReader, err := newChainReader(lggr, rargs)
 	return &medianProvider{
 		configWatcher:       configWatcher,
 		reportCodec:         reportCodec,
 		contractTransmitter: contractTransmitter,
-		medianContract:      medianContract,
+		chainReader:         chainReader,
 	}, nil
 }
 
@@ -532,9 +542,8 @@ type medianProvider struct {
 	configWatcher       *configWatcher
 	contractTransmitter ContractTransmitter
 	reportCodec         median.ReportCodec
-	medianContract      *medianContract
-
-	ms services.MultiStart
+	chainReader         relaytypes.ChainReader
+	ms                  services.MultiStart
 }
 
 func (p *medianProvider) Name() string {
@@ -568,7 +577,7 @@ func (p *medianProvider) ReportCodec() median.ReportCodec {
 }
 
 func (p *medianProvider) MedianContract() median.MedianContract {
-	return p.medianContract
+	return nil
 }
 
 func (p *medianProvider) OnchainConfigCodec() median.OnchainConfigCodec {
@@ -581,4 +590,8 @@ func (p *medianProvider) OffchainConfigDigester() ocrtypes.OffchainConfigDigeste
 
 func (p *medianProvider) ContractConfigTracker() ocrtypes.ContractConfigTracker {
 	return p.configWatcher.ContractConfigTracker()
+}
+
+func (p *medianProvider) ChainReader() relaytypes.ChainReader {
+	return p.chainReader
 }
