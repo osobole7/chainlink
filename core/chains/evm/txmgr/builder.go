@@ -78,6 +78,7 @@ func NewEvmTxm(
 	confirmer *Confirmer,
 	resender *Resender,
 ) *Txm {
+	// TODO(jtw): why does this wrapper function (NewEvmTxm) need to exist?
 	return txmgr.NewTxm(chainId, cfg, txCfg, keyStore, lggr, checkerFactory, fwdMgr, txAttemptBuilder, txStore, nonceSyncer, broadcaster, confirmer, resender)
 }
 

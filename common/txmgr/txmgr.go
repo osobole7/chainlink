@@ -224,6 +224,7 @@ func (b *Txm[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) abandon(ad
 	ctx, cancel := utils.StopChan(b.chStop).NewCtx()
 	defer cancel()
 	err = b.txStore.Abandon(ctx, b.chainID, addr)
+	// TODO(jtw): will this always return an error? if so why?
 	return errors.Wrapf(err, "abandon failed to update txes for key %s", addr.String())
 }
 
@@ -441,7 +442,8 @@ func (b *Txm[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) CreateTran
 	if txRequest.IdempotencyKey != nil {
 		var existingTx *txmgrtypes.Tx[CHAIN_ID, ADDR, TX_HASH, BLOCK_HASH, SEQ, FEE]
 		existingTx, err = b.txStore.FindTxWithIdempotencyKey(ctx, *txRequest.IdempotencyKey, b.chainID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		// TODO(jtw): remove dependency on sql.ErrNoRows... would recommend to have its own NotFound error type
+		if err != nil && !errors.Is(err, sql.ErrNoRows) { // BUG(jtw): the sql.ErrNoRows never gets returned from FindTxWithIdempotencyKey if EVM
 			return tx, errors.Wrap(err, "Failed to search for transaction with IdempotencyKey")
 		}
 		if existingTx != nil {

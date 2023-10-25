@@ -477,6 +477,7 @@ func (eb *Broadcaster[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, SEQ, FEE]) proc
 			return retryable, errors.Wrap(err, "processUnstartedTxs failed on NewAttempt")
 		}
 
+		// NOTE(jtw): PERSISTS THE TX_ATTEMPT in TX_STORE and UPDATES THE TX in the TX_STORE
 		if err := eb.txStore.UpdateTxUnstartedToInProgress(ctx, etx, &a); errors.Is(err, ErrTxRemoved) {
 			eb.logger.Debugw("tx removed", "txID", etx.ID, "subject", etx.Subject)
 			continue

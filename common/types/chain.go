@@ -11,4 +11,7 @@ type Sequence interface {
 
 // ID represents the base type, for any chain's ID.
 // It should be convertible to a string, that can uniquely identify this chain
-type ID fmt.Stringer
+type ID interface {
+	fmt.Stringer
+	comparable
+}

@@ -73,10 +73,10 @@ type TxRequest[ADDR types.Hashable, TX_HASH types.Hashable] struct {
 	// If IdempotencyKey is set to null, TXM will always create a new Tx.
 	// Since IdempotencyKey has to be globally unique, consider prepending the service or component's name it is being used by
 	// Such as {service}-{ID}. E.g vrf-12345
-	IdempotencyKey   *string
+	IdempotencyKey   *string // TODO(jtw): if this is set by the caller... does that mean we should know the data format? such as UUID or ULID? Knowing the data size can help reduce unneeded allocations.
 	FromAddress      ADDR
 	ToAddress        ADDR
-	EncodedPayload   []byte
+	EncodedPayload   []byte // TODO(jtw): is there a maximum or fixed size to this?
 	Value            big.Int
 	FeeLimit         uint32
 	Meta             *TxMeta[ADDR, TX_HASH]
