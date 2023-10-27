@@ -30,13 +30,28 @@ var (
 
 // Life of a Transaction
 // 1. Transaction Request is created
-// 2. Transaction Request is published to the Transaction Manager
-// 3. Transaction Manager asks the Attempt builder to figure out gas fee (Broadcaster)
-// 3. Transaction Manager asks the Checker to check if the transaction should not be sent (Broadcaster)
-// 3. Transaction Manager creates a new transaction attempt (Broadcaster)
-// 3. Transaction Manager attempts to Create the Transaction by sending Transaction to TransactionClient (Broadcaster)
-// 3. Transaction Manager marks the transaction from in_progress to unconfirmed (Broadcaster)
-// 4. Confirmer sets the last known block number for the transaction attempt (Confirmer)
+// 2. Transaction Request is submitted to the Transaction Manager
+// 3. Transaction Manager creates and persists a new transaction (unstarted) from the transaction request (not persisted)
+// 4. Transaction Manager sends the transaction (unstarted) to the Broadcaster Unstarted Queue
+// 4. Transaction Manager prunes the Unstarted Queue based on the transaction prune strategy
+
+// NOTE(jtw): Gets triggered by postgres Events
+// NOTE(jtw): Only one transaction per address can be in_progress at a time
+// NOTE(jtw): Only one broadcasted attempt exists per transaction the rest are errored or abandoned
+// 1. Broadcaster assigns a sequence number to the transaction
+// 2. Broadcaster creates and persists a new transaction attempt (in_progress) from the transaction (in_progress)
+// 3. Broadcaster asks the Checker to check if the transaction should not be sent
+// 4. Broadcaster asks the Attempt builder to figure out gas fee for the transaction
+// 5. Broadcaster attempts to send the Transaction to TransactionClient to be published on-chain
+// 6. Broadcaster updates the transaction attempt (broadcast) and transaction (unconfirmed)
+// 7. Broadcaster increments global sequence number for address for next transaction attempt
+
+// NOTE(jtw): Only one receipt should exist per confirmed transaction
+// 1. Confirmer listens and reads new Head events from the Chain
+// 2. Confirmer sets the last known block number for the transaction attempts that have been broadcast
+// 3. Confirmer checks for missing receipts for transactions that have been broadcast
+// 4. Confirmer sets transactions that have failed to (unconfirmed) which will be retried by the resender
+// 5. Confirmer sets transactions that have been confirmed to (confirmed) and creates a new receipt which is persisted
 
 type InMemoryStore[
 	CHAIN_ID types.ID,
@@ -52,9 +67,11 @@ type InMemoryStore[
 
 	keyStore txmgrtypes.KeyStore[ADDR, CHAIN_ID, SEQ]
 	// EventRecorder is used to persist events which can be replayed later to restore the state of the system
+	// rename to txStore
 	eventRecorder txmgrtypes.TxStore[ADDR, CHAIN_ID, TX_HASH, BLOCK_HASH, R, SEQ, FEE]
 
-	pendingLock               sync.Mutex
+	pendingLock sync.Mutex
+	// NOTE(jtw): we might need to watch out for txns that finish and are removed from the pending map
 	pendingIdempotencyKeys    map[string]*txmgrtypes.Tx[CHAIN_ID, ADDR, TX_HASH, BLOCK_HASH, SEQ, FEE]
 	pendingPipelineTaskRunIds map[string]*txmgrtypes.Tx[CHAIN_ID, ADDR, TX_HASH, BLOCK_HASH, SEQ, FEE]
 
@@ -214,6 +231,7 @@ func (ms *InMemoryStore[CHAIN_ID, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) Creat
 	return tx, ms.sendTxToBroadcaster(tx)
 }
 
+// TODO(jtw): change naming to something more appropriate
 func (ms *InMemoryStore[CHAIN_ID, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) sendTxToBroadcaster(tx txmgrtypes.Tx[CHAIN_ID, ADDR, TX_HASH, BLOCK_HASH, SEQ, FEE]) error {
 	// TODO(jtw); HANDLE PRUNING STEP
 

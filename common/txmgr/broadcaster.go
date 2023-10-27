@@ -208,6 +208,7 @@ func (eb *Broadcaster[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, SEQ, FEE]) star
 		return errors.New("Broadcaster is already started")
 	}
 	var err error
+	// NOTE(jtw): baked reliance on postgres notifications
 	eb.txInsertListener, err = eb.eventBroadcaster.Subscribe(pg.ChannelInsertOnTx, "")
 	if err != nil {
 		return errors.Wrap(err, "Broadcaster could not start")
