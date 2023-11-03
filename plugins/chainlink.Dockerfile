@@ -16,12 +16,12 @@ COPY . .
 
 # Build the golang binaries
 RUN make install-chainlink
-# Build LOOP Plugins
-RUN make install-median
 
 # Install medianpoc binary
 RUN make install-medianpoc
 
+# Link LOOP Plugin source dirs with simple names
+RUN go list -m -f "{{.Dir}}" github.com/smartcontractkit/chainlink-feeds | xargs -I % ln -s % /chainlink-feeds
 RUN go list -m -f "{{.Dir}}" github.com/smartcontractkit/chainlink-solana | xargs -I % ln -s % /chainlink-solana
 RUN mkdir /chainlink-starknet
 RUN go list -m -f "{{.Dir}}" github.com/smartcontractkit/chainlink-starknet/relayer | xargs -I % ln -s % /chainlink-starknet/relayer
@@ -29,6 +29,10 @@ RUN go list -m -f "{{.Dir}}" github.com/smartcontractkit/chainlink-starknet/rela
 # Build image: Plugins
 FROM golang:1.21-bullseye as buildplugins
 RUN go version
+
+WORKDIR /chainlink-feeds
+COPY --from=buildgo /chainlink-feeds .
+RUN go install ./cmd/chainlink-feeds
 
 WORKDIR /chainlink-solana
 COPY --from=buildgo /chainlink-solana .
