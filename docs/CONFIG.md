@@ -1712,6 +1712,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -1791,6 +1793,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -1870,6 +1874,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -1949,6 +1955,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2029,6 +2037,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2108,6 +2118,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2187,6 +2199,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2267,6 +2281,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2346,6 +2362,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '2s'
 DatabaseTimeout = '2s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '500ms'
 
 [OCR2]
@@ -2424,6 +2442,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2502,6 +2522,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2581,6 +2603,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '2s'
 DatabaseTimeout = '2s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '500ms'
 
 [OCR2]
@@ -2661,6 +2685,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2740,6 +2766,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '2s'
 DatabaseTimeout = '2s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '500ms'
 
 [OCR2]
@@ -2819,6 +2847,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2898,6 +2928,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -2977,6 +3009,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3056,6 +3090,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3135,6 +3171,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3215,6 +3253,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3294,6 +3334,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3372,6 +3414,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3451,6 +3495,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3530,6 +3576,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3609,6 +3657,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3687,6 +3737,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3766,6 +3818,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3845,6 +3899,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -3923,6 +3979,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4002,6 +4060,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4082,6 +4142,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4161,6 +4223,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4240,6 +4304,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4319,6 +4385,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4398,6 +4466,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4476,6 +4546,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4554,6 +4626,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4633,6 +4707,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4712,6 +4788,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4792,6 +4870,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4872,6 +4952,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -4951,6 +5033,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -5029,6 +5113,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -5107,6 +5193,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 1
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -5186,6 +5274,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -5265,6 +5355,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -5344,6 +5436,8 @@ LeaseDuration = '0s'
 ContractConfirmations = 4
 ContractTransmitterTransmitTimeout = '10s'
 DatabaseTimeout = '10s'
+DeltaCOverride = '168h0m0s'
+DeltaCJitterOverride = '1h0m0s'
 ObservationGracePeriod = '1s'
 
 [OCR2]
@@ -6018,6 +6112,8 @@ Set to '0s' to disable
 ContractConfirmations = 4 # Default
 ContractTransmitterTransmitTimeout = '10s' # Default
 DatabaseTimeout = '10s' # Default
+DeltaCOverride = "168h" # Default
+DeltaCJitterOverride = "1h" # Default
 ObservationGracePeriod = '1s' # Default
 ```
 
@@ -6039,6 +6135,18 @@ ContractTransmitterTransmitTimeout sets `OCR.ContractTransmitterTransmitTimeout`
 DatabaseTimeout = '10s' # Default
 ```
 DatabaseTimeout sets `OCR.DatabaseTimeout` for this EVM chain.
+
+### DeltaCOverride
+```toml
+DeltaCOverride = "168h" # Default
+```
+DeltaCOverride TODO Default is 168h (7 days).
+
+### DeltaCJitterOverride
+```toml
+DeltaCJitterOverride = "1h" # Default
+```
+DeltaCJitterOverride TODO
 
 ### ObservationGracePeriod
 ```toml

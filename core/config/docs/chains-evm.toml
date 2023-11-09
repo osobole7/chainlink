@@ -335,6 +335,10 @@ ContractConfirmations = 4 # Default
 ContractTransmitterTransmitTimeout = '10s' # Default
 # DatabaseTimeout sets `OCR.DatabaseTimeout` for this EVM chain.
 DatabaseTimeout = '10s' # Default
+# DeltaCOverride TODO Default is 168h (7 days).
+DeltaCOverride = "168h" # Default
+# DeltaCJitterOverride TODO
+DeltaCJitterOverride = "1h" # Default
 # ObservationGracePeriod sets `OCR.ObservationGracePeriod` for this EVM chain.
 ObservationGracePeriod = '1s' # Default
 

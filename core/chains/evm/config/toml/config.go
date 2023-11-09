@@ -714,7 +714,10 @@ type OCR struct {
 	ContractConfirmations              *uint16
 	ContractTransmitterTransmitTimeout *models.Duration
 	DatabaseTimeout                    *models.Duration
-	ObservationGracePeriod             *models.Duration
+	//TODO validate
+	DeltaCOverride         *models.Duration
+	DeltaCJitterOverride   *models.Duration
+	ObservationGracePeriod *models.Duration
 }
 
 func (o *OCR) setFrom(f *OCR) {
@@ -726,6 +729,12 @@ func (o *OCR) setFrom(f *OCR) {
 	}
 	if v := f.DatabaseTimeout; v != nil {
 		o.DatabaseTimeout = v
+	}
+	if v := f.DeltaCOverride; v != nil {
+		o.DeltaCOverride = v
+	}
+	if v := f.DeltaCJitterOverride; v != nil {
+		o.DeltaCJitterOverride = v
 	}
 	if v := f.ObservationGracePeriod; v != nil {
 		o.ObservationGracePeriod = v
