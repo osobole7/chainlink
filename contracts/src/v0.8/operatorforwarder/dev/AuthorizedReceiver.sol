@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {AuthorizedReceiverInterface} from "../../interfaces/AuthorizedReceiverInterface.sol";
+import {AuthorizedReceiverInterface} from "./interfaces/AuthorizedReceiverInterface.sol";
 
 // solhint-disable custom-errors
 abstract contract AuthorizedReceiver is AuthorizedReceiverInterface {
@@ -16,11 +16,11 @@ abstract contract AuthorizedReceiver is AuthorizedReceiverInterface {
     require(senders.length > 0, "Must have at least 1 sender");
     // Set previous authorized senders to false
     uint256 authorizedSendersLength = s_authorizedSenderList.length;
-    for (uint256 i = 0; i < authorizedSendersLength; i++) {
+    for (uint256 i = 0; i < authorizedSendersLength; ++i) {
       s_authorizedSenders[s_authorizedSenderList[i]] = false;
     }
     // Set new to true
-    for (uint256 i = 0; i < senders.length; i++) {
+    for (uint256 i = 0; i < senders.length; ++i) {
       require(s_authorizedSenders[senders[i]] == false, "Must not have duplicate senders");
       s_authorizedSenders[senders[i]] = true;
     }

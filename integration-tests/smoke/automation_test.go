@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/kelseyhightower/envconfig"
 	"math/big"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/require"
 
@@ -78,9 +78,9 @@ var (
 
 func TestMain(m *testing.M) {
 	logging.Init()
-	fmt.Printf("Running Smoke Test on %s\n", networks.SelectedNetwork.Name) // Print to get around disabled logging
-	fmt.Printf("Chainlink Image %s\n", os.Getenv("CHAINLINK_IMAGE"))        // Print to get around disabled logging
-	fmt.Printf("Chainlink Version %s\n", os.Getenv("CHAINLINK_VERSION"))    // Print to get around disabled logging
+	fmt.Printf("Running Smoke Test on %s\n", networks.MustGetSelectedNetworksFromEnv()[0].Name) // Print to get around disabled logging
+	fmt.Printf("Chainlink Image %s\n", os.Getenv("CHAINLINK_IMAGE"))                            // Print to get around disabled logging
+	fmt.Printf("Chainlink Version %s\n", os.Getenv("CHAINLINK_VERSION"))                        // Print to get around disabled logging
 	os.Exit(m.Run())
 }
 
@@ -91,11 +91,12 @@ func TestAutomationBasic(t *testing.T) {
 func SetupAutomationBasic(t *testing.T, nodeUpgrade bool) {
 	t.Parallel()
 	registryVersions := map[string]ethereum.KeeperRegistryVersion{
-		"registry_2_0":                  ethereum.RegistryVersion_2_0,
-		"registry_2_1_conditional":      ethereum.RegistryVersion_2_1,
-		"registry_2_1_logtrigger":       ethereum.RegistryVersion_2_1,
-		"registry_2_1_with_mercury_v02": ethereum.RegistryVersion_2_1,
-		"registry_2_1_with_mercury_v03": ethereum.RegistryVersion_2_1,
+		"registry_2_0":                                 ethereum.RegistryVersion_2_0,
+		"registry_2_1_conditional":                     ethereum.RegistryVersion_2_1,
+		"registry_2_1_logtrigger":                      ethereum.RegistryVersion_2_1,
+		"registry_2_1_with_mercury_v02":                ethereum.RegistryVersion_2_1,
+		"registry_2_1_with_mercury_v03":                ethereum.RegistryVersion_2_1,
+		"registry_2_1_with_logtrigger_and_mercury_v02": ethereum.RegistryVersion_2_1,
 	}
 
 	for n, rv := range registryVersions {
@@ -121,8 +122,8 @@ func SetupAutomationBasic(t *testing.T, nodeUpgrade bool) {
 			}
 
 			// Use the name to determine if this is a log trigger or mercury
-			isLogTrigger := name == "registry_2_1_logtrigger"
-			isMercuryV02 := name == "registry_2_1_with_mercury_v02"
+			isLogTrigger := name == "registry_2_1_logtrigger" || name == "registry_2_1_with_logtrigger_and_mercury_v02"
+			isMercuryV02 := name == "registry_2_1_with_mercury_v02" || name == "registry_2_1_with_logtrigger_and_mercury_v02"
 			isMercuryV03 := name == "registry_2_1_with_mercury_v03"
 			isMercury := isMercuryV02 || isMercuryV03
 
@@ -1026,7 +1027,7 @@ func setupAutomationTestDocker(
 	l := logging.GetTestLogger(t)
 	// Add registry version to config
 	registryConfig.RegistryVersion = registryVersion
-	network := networks.SelectedNetwork
+	network := networks.MustGetSelectedNetworksFromEnv()[0]
 
 	// build the node config
 	clNodeConfig := node.NewConfig(node.NewBaseConfig())
@@ -1036,7 +1037,6 @@ func setupAutomationTestDocker(
 	clNodeConfig.Keeper.TurnLookBack = it_utils.Ptr[int64](int64(0))
 	clNodeConfig.Keeper.Registry.SyncInterval = &syncInterval
 	clNodeConfig.Keeper.Registry.PerformGasOverhead = it_utils.Ptr[uint32](uint32(150000))
-	clNodeConfig.P2P.V2.Enabled = it_utils.Ptr[bool](true)
 	clNodeConfig.P2P.V2.AnnounceAddresses = &[]string{"0.0.0.0:6690"}
 	clNodeConfig.P2P.V2.ListenAddresses = &[]string{"0.0.0.0:6690"}
 
@@ -1054,6 +1054,7 @@ func setupAutomationTestDocker(
 			WithGeth().
 			WithMockAdapter().
 			WithFunding(big.NewFloat(testConfig.ChainlinkNodeFunding)).
+			WithStandardCleanup().
 			Build()
 		require.NoError(t, err, "Error deploying test environment for Mercury")
 		env.ParallelTransactions(true)
@@ -1099,6 +1100,7 @@ func setupAutomationTestDocker(
 			WithCLNodes(clNodesCount).
 			WithCLNodeConfig(clNodeConfig).
 			WithFunding(big.NewFloat(testConfig.ChainlinkNodeFunding)).
+			WithStandardCleanup().
 			Build()
 		require.NoError(t, err, "Error deploying test environment")
 	}
