@@ -16,9 +16,10 @@ import (
 var _ relaytypes.LLOProvider = (*lloProvider)(nil)
 
 type lloProvider struct {
-	configWatcher *configWatcher
-	transmitter   llo.Transmitter
-	logger        logger.Logger
+	configWatcher          *configWatcher
+	transmitter            llo.Transmitter
+	logger                 logger.Logger
+	channelDefinitionCache llo.ChannelDefinitionCache
 
 	ms services.MultiStart
 }
@@ -33,6 +34,7 @@ func NewLLOProvider(
 		configWatcher,
 		transmitter,
 		lggr,
+		channelDefinitionCache,
 		services.MultiStart{},
 	}
 }

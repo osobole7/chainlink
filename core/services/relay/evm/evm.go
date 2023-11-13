@@ -235,8 +235,9 @@ func (r *Relayer) NewLLOProvider(rargs relaytypes.RelayArgs, pargs relaytypes.Pl
 	// FIXME
 	// transmitter := llo.NewTransmitter(r.lggr, configWatcher.ContractConfigTracker(), client, privKey.PublicKey, rargs.JobID, r.db, r.pgCfg)
 	transmitter := llo.NewTransmitter(r.lggr, client, privKey.PublicKey)
+	channelDefinitionCache := llo.NewChannelDefinitionCache()
 
-	return NewLLOProvider(configWatcher, transmitter, r.lggr), nil
+	return NewLLOProvider(configWatcher, transmitter, r.lggr, channelDefinitionCache), nil
 }
 
 func (r *Relayer) NewFunctionsProvider(rargs relaytypes.RelayArgs, pargs relaytypes.PluginArgs) (relaytypes.FunctionsProvider, error) {

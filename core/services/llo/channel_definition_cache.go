@@ -27,6 +27,8 @@ func NewChannelDefinitionCache() ChannelDefinitionCache {
 	return &channelDefinitionCache{}
 }
 
+// TODO: Needs a way to subscribe/unsubscribe to contracts
+
 func (c *channelDefinitionCache) Start(ctx context.Context) error {
 	// TODO: Initial load, then poll
 	// TODO: needs to be populated asynchronously from onchain ConfigurationStore
