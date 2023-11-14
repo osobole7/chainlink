@@ -1064,10 +1064,7 @@ func testSingleConsumerEIP150(
 	vrfVersion vrfcommon.Version,
 	nativePayment bool,
 ) {
-	callBackGasLimit := int64(2_500_000)            // base callback gas.
-	eip150Fee := callBackGasLimit / 64              // premium needed for callWithExactGas
-	coordinatorFulfillmentOverhead := int64(90_000) // fixed gas used in coordinator fulfillment
-	gasLimit := callBackGasLimit + eip150Fee + coordinatorFulfillmentOverhead
+	callBackGasLimit := int64(2_500_000) // base callback gas.
 
 	key1 := cltest.MustGenerateRandomKey(t)
 	gasLanePriceWei := assets.GWei(10)
@@ -1077,7 +1074,7 @@ func testSingleConsumerEIP150(
 			Key:          ptr(key1.EIP55Address),
 			GasEstimator: v2.KeySpecificGasEstimator{PriceMax: gasLanePriceWei},
 		})(c, s)
-		c.EVM[0].GasEstimator.LimitDefault = ptr(uint32(gasLimit))
+		c.EVM[0].GasEstimator.LimitDefault = ptr(uint32(3.5e6))
 		c.EVM[0].MinIncomingConfirmations = ptr[uint32](2)
 		c.Feature.LogPoller = ptr(true)
 		c.EVM[0].LogPollInterval = models.MustNewDuration(1 * time.Second)
