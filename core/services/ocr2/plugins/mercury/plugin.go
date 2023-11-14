@@ -7,9 +7,9 @@ import (
 
 	libocr2 "github.com/smartcontractkit/libocr/offchainreporting2plus"
 
-	relaymercuryv1 "github.com/smartcontractkit/chainlink-relay/pkg/reportingplugins/mercury/v1"
-	relaymercuryv2 "github.com/smartcontractkit/chainlink-relay/pkg/reportingplugins/mercury/v2"
-	relaymercuryv3 "github.com/smartcontractkit/chainlink-relay/pkg/reportingplugins/mercury/v3"
+	relaymercuryv1 "github.com/smartcontractkit/chainlink-llo/mercury/v1"
+	relaymercuryv2 "github.com/smartcontractkit/chainlink-llo/mercury/v2"
+	relaymercuryv3 "github.com/smartcontractkit/chainlink-llo/mercury/v3"
 	relaytypes "github.com/smartcontractkit/chainlink-relay/pkg/types"
 
 	"github.com/smartcontractkit/chainlink/v2/core/logger"

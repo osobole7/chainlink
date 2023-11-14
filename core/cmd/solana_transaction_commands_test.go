@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 
-	"github.com/smartcontractkit/chainlink-relay/pkg/utils"
+	"github.com/smartcontractkit/chainlink-relay/pkg/config"
 	solanaClient "github.com/smartcontractkit/chainlink-solana/pkg/solana/client"
 	solcfg "github.com/smartcontractkit/chainlink-solana/pkg/solana/config"
 
@@ -29,7 +29,7 @@ func TestShell_SolanaSendSol(t *testing.T) {
 	url := solanaClient.SetupLocalSolNode(t)
 	node := solcfg.Node{
 		Name: ptr(t.Name()),
-		URL:  utils.MustParseURL(url),
+		URL:  config.MustParseURL(url),
 	}
 	cfg := solana.TOMLConfig{
 		ChainID: &chainID,
