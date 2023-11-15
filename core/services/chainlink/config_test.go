@@ -17,11 +17,11 @@ import (
 	ocrcommontypes "github.com/smartcontractkit/libocr/commontypes"
 
 	coscfg "github.com/smartcontractkit/chainlink-cosmos/pkg/cosmos/config"
-	relayutils "github.com/smartcontractkit/chainlink-relay/pkg/utils"
 	"github.com/smartcontractkit/chainlink-solana/pkg/solana"
 	solcfg "github.com/smartcontractkit/chainlink-solana/pkg/solana/config"
 	stkcfg "github.com/smartcontractkit/chainlink-starknet/relayer/pkg/chainlink/config"
 
+	relayconfig "github.com/smartcontractkit/chainlink-relay/pkg/config"
 	"github.com/smartcontractkit/chainlink/v2/core/assets"
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm/client"
 	evmcfg "github.com/smartcontractkit/chainlink/v2/core/chains/evm/config/toml"
@@ -144,7 +144,7 @@ var (
 					MaxMsgsPerBatch: ptr[int64](13),
 				},
 				Nodes: []*coscfg.Node{
-					{Name: ptr("primary"), TendermintURL: relayutils.MustParseURL("http://columbus.cosmos.com")},
+					{Name: ptr("primary"), TendermintURL: relayconfig.MustParseURL("http://columbus.cosmos.com")},
 				}},
 			{
 				ChainID: ptr("Malaga-420"),
@@ -152,7 +152,7 @@ var (
 					BlocksUntilTxTimeout: ptr[int64](20),
 				},
 				Nodes: []*coscfg.Node{
-					{Name: ptr("secondary"), TendermintURL: relayutils.MustParseURL("http://bombay.cosmos.com")},
+					{Name: ptr("secondary"), TendermintURL: relayconfig.MustParseURL("http://bombay.cosmos.com")},
 				}},
 		},
 		Solana: []*solana.TOMLConfig{
@@ -162,16 +162,16 @@ var (
 					MaxRetries: ptr[int64](12),
 				},
 				Nodes: []*solcfg.Node{
-					{Name: ptr("primary"), URL: relayutils.MustParseURL("http://mainnet.solana.com")},
+					{Name: ptr("primary"), URL: relayconfig.MustParseURL("http://mainnet.solana.com")},
 				},
 			},
 			{
 				ChainID: ptr("testnet"),
 				Chain: solcfg.Chain{
-					OCR2CachePollPeriod: relayutils.MustNewDuration(time.Minute),
+					OCR2CachePollPeriod: relayconfig.MustNewDuration(time.Minute),
 				},
 				Nodes: []*solcfg.Node{
-					{Name: ptr("secondary"), URL: relayutils.MustParseURL("http://testnet.solana.com")},
+					{Name: ptr("secondary"), URL: relayconfig.MustParseURL("http://testnet.solana.com")},
 				},
 			},
 		},
@@ -179,10 +179,10 @@ var (
 			{
 				ChainID: ptr("foobar"),
 				Chain: stkcfg.Chain{
-					ConfirmationPoll: relayutils.MustNewDuration(time.Hour),
+					ConfirmationPoll: relayconfig.MustNewDuration(time.Hour),
 				},
 				Nodes: []*stkcfg.Node{
-					{Name: ptr("primary"), URL: relayutils.MustParseURL("http://stark.node")},
+					{Name: ptr("primary"), URL: relayconfig.MustParseURL("http://stark.node")},
 				},
 			},
 		},
@@ -604,13 +604,13 @@ func TestConfig_Marshal(t *testing.T) {
 			ChainID: ptr("mainnet"),
 			Enabled: ptr(false),
 			Chain: solcfg.Chain{
-				BalancePollPeriod:       relayutils.MustNewDuration(time.Minute),
-				ConfirmPollPeriod:       relayutils.MustNewDuration(time.Second),
-				OCR2CachePollPeriod:     relayutils.MustNewDuration(time.Minute),
-				OCR2CacheTTL:            relayutils.MustNewDuration(time.Hour),
-				TxTimeout:               relayutils.MustNewDuration(time.Hour),
-				TxRetryTimeout:          relayutils.MustNewDuration(time.Minute),
-				TxConfirmTimeout:        relayutils.MustNewDuration(time.Second),
+				BalancePollPeriod:       relayconfig.MustNewDuration(time.Minute),
+				ConfirmPollPeriod:       relayconfig.MustNewDuration(time.Second),
+				OCR2CachePollPeriod:     relayconfig.MustNewDuration(time.Minute),
+				OCR2CacheTTL:            relayconfig.MustNewDuration(time.Hour),
+				TxTimeout:               relayconfig.MustNewDuration(time.Hour),
+				TxRetryTimeout:          relayconfig.MustNewDuration(time.Minute),
+				TxConfirmTimeout:        relayconfig.MustNewDuration(time.Second),
 				SkipPreflight:           ptr(true),
 				Commitment:              ptr("banana"),
 				MaxRetries:              ptr[int64](7),
@@ -618,12 +618,12 @@ func TestConfig_Marshal(t *testing.T) {
 				ComputeUnitPriceMax:     ptr[uint64](1000),
 				ComputeUnitPriceMin:     ptr[uint64](10),
 				ComputeUnitPriceDefault: ptr[uint64](100),
-				FeeBumpPeriod:           relayutils.MustNewDuration(time.Minute),
+				FeeBumpPeriod:           relayconfig.MustNewDuration(time.Minute),
 			},
 			Nodes: []*solcfg.Node{
-				{Name: ptr("primary"), URL: relayutils.MustParseURL("http://solana.web")},
-				{Name: ptr("foo"), URL: relayutils.MustParseURL("http://solana.foo")},
-				{Name: ptr("bar"), URL: relayutils.MustParseURL("http://solana.bar")},
+				{Name: ptr("primary"), URL: relayconfig.MustParseURL("http://solana.web")},
+				{Name: ptr("foo"), URL: relayconfig.MustParseURL("http://solana.foo")},
+				{Name: ptr("bar"), URL: relayconfig.MustParseURL("http://solana.bar")},
 			},
 		},
 	}
@@ -632,14 +632,14 @@ func TestConfig_Marshal(t *testing.T) {
 			ChainID: ptr("foobar"),
 			Enabled: ptr(true),
 			Chain: stkcfg.Chain{
-				OCR2CachePollPeriod: relayutils.MustNewDuration(6 * time.Hour),
-				OCR2CacheTTL:        relayutils.MustNewDuration(3 * time.Minute),
-				RequestTimeout:      relayutils.MustNewDuration(time.Minute + 3*time.Second),
-				TxTimeout:           relayutils.MustNewDuration(13 * time.Second),
-				ConfirmationPoll:    relayutils.MustNewDuration(42 * time.Second),
+				OCR2CachePollPeriod: relayconfig.MustNewDuration(6 * time.Hour),
+				OCR2CacheTTL:        relayconfig.MustNewDuration(3 * time.Minute),
+				RequestTimeout:      relayconfig.MustNewDuration(time.Minute + 3*time.Second),
+				TxTimeout:           relayconfig.MustNewDuration(13 * time.Second),
+				ConfirmationPoll:    relayconfig.MustNewDuration(42 * time.Second),
 			},
 			Nodes: []*stkcfg.Node{
-				{Name: ptr("primary"), URL: relayutils.MustParseURL("http://stark.node")},
+				{Name: ptr("primary"), URL: relayconfig.MustParseURL("http://stark.node")},
 			},
 		},
 	}
@@ -649,21 +649,21 @@ func TestConfig_Marshal(t *testing.T) {
 			Enabled: ptr(true),
 			Chain: coscfg.Chain{
 				Bech32Prefix:         ptr("wasm"),
-				BlockRate:            relayutils.MustNewDuration(time.Minute),
+				BlockRate:            relayconfig.MustNewDuration(time.Minute),
 				BlocksUntilTxTimeout: ptr[int64](12),
-				ConfirmPollPeriod:    relayutils.MustNewDuration(time.Second),
+				ConfirmPollPeriod:    relayconfig.MustNewDuration(time.Second),
 				FallbackGasPrice:     mustDecimal("0.001"),
 				GasToken:             ptr("ucosm"),
 				GasLimitMultiplier:   mustDecimal("1.2"),
 				MaxMsgsPerBatch:      ptr[int64](17),
-				OCR2CachePollPeriod:  relayutils.MustNewDuration(time.Minute),
-				OCR2CacheTTL:         relayutils.MustNewDuration(time.Hour),
-				TxMsgTimeout:         relayutils.MustNewDuration(time.Second),
+				OCR2CachePollPeriod:  relayconfig.MustNewDuration(time.Minute),
+				OCR2CacheTTL:         relayconfig.MustNewDuration(time.Hour),
+				TxMsgTimeout:         relayconfig.MustNewDuration(time.Second),
 			},
 			Nodes: []*coscfg.Node{
-				{Name: ptr("primary"), TendermintURL: relayutils.MustParseURL("http://tender.mint")},
-				{Name: ptr("foo"), TendermintURL: relayutils.MustParseURL("http://foo.url")},
-				{Name: ptr("bar"), TendermintURL: relayutils.MustParseURL("http://bar.web")},
+				{Name: ptr("primary"), TendermintURL: relayconfig.MustParseURL("http://tender.mint")},
+				{Name: ptr("foo"), TendermintURL: relayconfig.MustParseURL("http://foo.url")},
+				{Name: ptr("bar"), TendermintURL: relayconfig.MustParseURL("http://bar.web")},
 			},
 		},
 	}
