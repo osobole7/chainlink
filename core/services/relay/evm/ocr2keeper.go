@@ -22,6 +22,7 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm"
 	"github.com/smartcontractkit/chainlink/v2/core/logger"
 	"github.com/smartcontractkit/chainlink/v2/core/services/job"
+	"github.com/smartcontractkit/chainlink/v2/core/services/keystore"
 	"github.com/smartcontractkit/chainlink/v2/core/services/pipeline"
 	"github.com/smartcontractkit/chainlink/v2/core/services/relay/evm/types"
 )
@@ -55,16 +56,18 @@ type ocr2keeperRelayer struct {
 	pr    pipeline.Runner
 	spec  job.Job
 	lggr  logger.Logger
+	ks    keystore.Eth
 }
 
 // NewOCR2KeeperRelayer is the constructor of ocr2keeperRelayer
-func NewOCR2KeeperRelayer(db *sqlx.DB, chain evm.Chain, pr pipeline.Runner, spec job.Job, lggr logger.Logger) OCR2KeeperRelayer {
+func NewOCR2KeeperRelayer(db *sqlx.DB, chain evm.Chain, pr pipeline.Runner, spec job.Job, lggr logger.Logger, ks keystore.Eth) OCR2KeeperRelayer {
 	return &ocr2keeperRelayer{
 		db:    db,
 		chain: chain,
 		pr:    pr,
 		spec:  spec,
 		lggr:  lggr,
+		ks:    ks,
 	}
 }
 
@@ -74,8 +77,7 @@ func (r *ocr2keeperRelayer) NewOCR2KeeperProvider(rargs relaytypes.RelayArgs, pa
 		return nil, err
 	}
 
-	gasLimit := cfgWatcher.chain.Config().EVM().OCR2().Automation().GasLimit()
-	contractTransmitter, err := newPipelineContractTransmitter(r.lggr, rargs, pargs.TransmitterID, &gasLimit, cfgWatcher, r.spec, r.pr)
+	contractTransmitter, err := newContractTransmitter(r.lggr, rargs, pargs.TransmitterID, cfgWatcher, r.ks)
 	if err != nil {
 		return nil, err
 	}
