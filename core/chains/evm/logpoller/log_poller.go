@@ -679,7 +679,7 @@ func (lp *logPoller) backfill(ctx context.Context, start, end int64) error {
 		}
 
 		lp.lggr.Debugw("Backfill found logs", "from", from, "to", to, "logs", len(gethLogs), "blocks", blocks)
-		err = lp.orm.InsertLogs(convertLogs(gethLogs, blocks, lp.lggr, lp.ec.ConfiguredChainID()), pg.WithParentCtx(ctx))
+		err = lp.orm.InsertLogsWithBlock(convertLogs(gethLogs, blocks, lp.lggr, lp.ec.ConfiguredChainID()), blocks[len(blocks)-1], pg.WithParentCtx(ctx))
 		if err != nil {
 			lp.lggr.Warnw("Unable to insert logs, retrying", "err", err, "from", from, "to", to)
 			return err
@@ -903,7 +903,13 @@ func (lp *logPoller) findBlockAfterLCA(ctx context.Context, current *evmtypes.He
 	// This can happen only if finalityTag is not enabled and fixed finalityDepth is provided via config.
 	for parent.Number >= latestFinalizedBlockNumber {
 		ourParentBlockHash, err := lp.orm.SelectBlockByNumber(parent.Number, pg.WithParentCtx(ctx))
-		if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// This can happen if we're on a new chain or the node is starting for the first time, due to
+			//  the blocks table not having enough history yet. Since there is nothing
+			//  before this to delete there is no reason to worry about re-orgs any deeper.
+			lp.lggr.Infow("Unable to find parent of current block in db", "parentBlockNumber", parent.Number, parent.Hash, "currentBlockNumber", current.Number, "currentBlockHash", current.Hash)
+			return &blockAfterLCA, nil
+		} else if err != nil {
 			return nil, err
 		}
 		if parent.Hash == ourParentBlockHash.BlockHash {
