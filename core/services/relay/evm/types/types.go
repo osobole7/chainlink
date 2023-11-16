@@ -28,15 +28,13 @@ type RelayOpts struct {
 }
 
 type ChainReaderConfig struct {
-	// key being contract name
+	// ChainContractReaders key is contract name
 	ChainContractReaders map[string]ChainContractReader `json:"chainContractReaders"`
-
-	// ..reserved for any global config options chainreader might need..
 }
 
 type ChainContractReader struct {
 	ContractABI string `json:"contractABI"`
-	// key is genericName from config
+	// ChainReaderDefinitions key is chainAgnostic read name.
 	ChainReaderDefinitions map[string]ChainReaderDefinition `json:"chainReaderDefinitions"`
 }
 
