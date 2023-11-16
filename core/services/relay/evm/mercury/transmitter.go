@@ -120,6 +120,8 @@ type mercuryTransmitter struct {
 
 	deleteQueue chan *pb.TransmitRequest
 
+	cache Cache
+
 	transmitSuccessCount          prometheus.Counter
 	transmitDuplicateCount        prometheus.Counter
 	transmitConnectionErrorCount  prometheus.Counter
@@ -147,7 +149,7 @@ func getPayloadTypes() abi.Arguments {
 	})
 }
 
-func NewTransmitter(lggr logger.Logger, cfgTracker ConfigTracker, rpcClient wsrpc.Client, fromAccount ed25519.PublicKey, jobID int32, feedID [32]byte, db *sqlx.DB, cfg pg.QConfig, codec TransmitterReportDecoder) *mercuryTransmitter {
+func NewTransmitter(lggr logger.Logger, cfgTracker ConfigTracker, rpcClient wsrpc.Client, fromAccount ed25519.PublicKey, jobID int32, feedID [32]byte, db *sqlx.DB, cfg pg.QConfig, codec TransmitterReportDecoder, cache Cache) *mercuryTransmitter {
 	feedIDHex := fmt.Sprintf("0x%x", feedID[:])
 	persistenceManager := NewPersistenceManager(lggr, NewORM(db, lggr, cfg), jobID, maxTransmitQueueSize, flushDeletesFrequency, pruneFrequency)
 	return &mercuryTransmitter{
@@ -164,6 +166,7 @@ func NewTransmitter(lggr logger.Logger, cfgTracker ConfigTracker, rpcClient wsrp
 		nil,
 		sync.WaitGroup{},
 		make(chan *pb.TransmitRequest, maxDeleteQueueSize),
+		cache,
 		transmitSuccessCount.WithLabelValues(feedIDHex),
 		transmitDuplicateCount.WithLabelValues(feedIDHex),
 		transmitConnectionErrorCount.WithLabelValues(feedIDHex),
@@ -398,6 +401,7 @@ func (mt *mercuryTransmitter) FetchInitialMaxFinalizedBlockNumber(ctx context.Co
 }
 
 func (mt *mercuryTransmitter) LatestPrice(ctx context.Context, feedID [32]byte) (*big.Int, error) {
+	// TODO: Caching
 	mt.lggr.Trace("LatestPrice")
 
 	fullReport, err := mt.latestReport(ctx, feedID)

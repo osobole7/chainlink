@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -52,6 +53,7 @@ type Relayer struct {
 	lggr             logger.Logger
 	ks               CSAETHKeystore
 	mercuryPool      wsrpc.Pool
+	mercuryCache     mercury.Cache
 	eventBroadcaster pg.EventBroadcaster
 	pgCfg            pg.QConfig
 }
@@ -66,6 +68,10 @@ type RelayerOpts struct {
 	pg.QConfig
 	CSAETHKeystore
 	pg.EventBroadcaster
+
+	// See mercury.Cache for documentation on these opts
+	MercuryCacheLatestPriceTTL time.Duration
+	MercuryCacheMaxStaleAge    time.Duration
 }
 
 func (c RelayerOpts) Validate() error {
@@ -96,11 +102,18 @@ func NewRelayer(lggr logger.Logger, chain evm.Chain, opts RelayerOpts) (*Relayer
 	}
 	lggr = lggr.Named("Relayer")
 	return &Relayer{
-		db:               opts.DB,
-		chain:            chain,
-		lggr:             lggr,
-		ks:               opts.CSAETHKeystore,
-		mercuryPool:      wsrpc.NewPool(lggr),
+		db:          opts.DB,
+		chain:       chain,
+		lggr:        lggr,
+		ks:          opts.CSAETHKeystore,
+		mercuryPool: wsrpc.NewPool(lggr),
+		// TODO: Cache actually needs to be keyed per mercury server
+		mercuryCache: mercury.NewCache(mercury.CacheConfig{
+			Logger:         lggr,
+			FetchLatestPrice: // TODO: how to get this??,
+			LatestPriceTTL: opts.MercuryCacheLatestPriceTTL,
+			MaxStaleAge:    opts.MercuryCacheMaxStaleAge,
+		}),
 		eventBroadcaster: opts.EventBroadcaster,
 		pgCfg:            opts.QConfig,
 	}, nil
@@ -187,7 +200,7 @@ func (r *Relayer) NewMercuryProvider(rargs relaytypes.RelayArgs, pargs relaytype
 	default:
 		return nil, fmt.Errorf("invalid feed version %d", feedID.Version())
 	}
-	transmitter := mercury.NewTransmitter(lggr, cw.ContractConfigTracker(), client, privKey.PublicKey, rargs.JobID, *relayConfig.FeedID, r.db, r.pgCfg, transmitterCodec)
+	transmitter := mercury.NewTransmitter(lggr, cw.ContractConfigTracker(), client, privKey.PublicKey, rargs.JobID, *relayConfig.FeedID, r.db, r.pgCfg, transmitterCodec, r.mercuryCache)
 
 	chainReader := NewChainReader(r.chain.HeadTracker())
 	return NewMercuryProvider(cw, transmitter, reportCodecV1, reportCodecV2, reportCodecV3, chainReader, lggr), nil
