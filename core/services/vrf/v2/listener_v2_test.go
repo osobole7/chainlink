@@ -17,7 +17,6 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/gethwrappers/generated/vrf_coordinator_v2"
 	"github.com/smartcontractkit/chainlink/v2/core/gethwrappers/generated/vrf_coordinator_v2plus_interface"
 	"github.com/smartcontractkit/chainlink/v2/core/services/job"
-	"github.com/smartcontractkit/chainlink/v2/core/services/pg/datatypes"
 	"github.com/smartcontractkit/chainlink/v2/core/services/vrf/vrfcommon"
 
 	txmgrcommon "github.com/smartcontractkit/chainlink/v2/common/txmgr"
@@ -77,7 +76,7 @@ func addEthTx(t *testing.T, txStore txmgr.TestEvmTxStore, from common.Address, s
 		RequestTxHash: &reqTxHash,
 	})
 	require.NoError(t, err)
-	meta := datatypes.JSON(b)
+	meta := json.RawMessage(b)
 	tx := &txmgr.Tx{
 		FromAddress:       from,
 		ToAddress:         from,
@@ -103,7 +102,7 @@ func addConfirmedEthTx(t *testing.T, txStore txmgr.TestEvmTxStore, from common.A
 		GlobalSubID: txMetaGlobalSubID,
 	})
 	require.NoError(t, err)
-	meta := datatypes.JSON(b)
+	meta := json.RawMessage(b)
 	now := time.Now()
 
 	tx := &txmgr.Tx{
@@ -135,7 +134,7 @@ func addEthTxNativePayment(t *testing.T, txStore txmgr.TestEvmTxStore, from comm
 		RequestTxHash: &reqTxHash,
 	})
 	require.NoError(t, err)
-	meta := datatypes.JSON(b)
+	meta := json.RawMessage(b)
 	tx := &txmgr.Tx{
 		FromAddress:       from,
 		ToAddress:         from,
@@ -161,7 +160,7 @@ func addConfirmedEthTxNativePayment(t *testing.T, txStore txmgr.TestEvmTxStore, 
 		GlobalSubID: txMetaGlobalSubID,
 	})
 	require.NoError(t, err)
-	meta := datatypes.JSON(b)
+	meta := json.RawMessage(b)
 	now := time.Now()
 	tx := &txmgr.Tx{
 		Sequence:           &nonce,

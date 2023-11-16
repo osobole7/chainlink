@@ -17,7 +17,6 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/common/types"
 	"github.com/smartcontractkit/chainlink/v2/core/logger"
 	clnull "github.com/smartcontractkit/chainlink/v2/core/null"
-	"github.com/smartcontractkit/chainlink/v2/core/services/pg/datatypes"
 )
 
 // TxStrategy controls how txes are queued and sent
@@ -210,7 +209,7 @@ type Tx[
 	// Marshalled TxMeta
 	// Used for additional context around transactions which you want to log
 	// at send time.
-	Meta    *datatypes.JSON
+	Meta    *json.RawMessage
 	Subject uuid.NullUUID
 	ChainID CHAIN_ID
 
@@ -219,7 +218,7 @@ type Tx[
 
 	// TransmitChecker defines the check that should be performed before a transaction is submitted on
 	// chain.
-	TransmitChecker *datatypes.JSON
+	TransmitChecker *json.RawMessage
 
 	// Marks tx requiring callback
 	SignalCallback bool

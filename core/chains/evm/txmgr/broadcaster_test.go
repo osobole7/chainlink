@@ -43,7 +43,6 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/services/chainlink"
 	"github.com/smartcontractkit/chainlink/v2/core/services/keystore"
 	ksmocks "github.com/smartcontractkit/chainlink/v2/core/services/keystore/mocks"
-	"github.com/smartcontractkit/chainlink/v2/core/services/pg/datatypes"
 	"github.com/smartcontractkit/chainlink/v2/core/utils"
 )
 
@@ -255,7 +254,7 @@ func TestEthBroadcaster_ProcessUnstartedEthTxs_Success(t *testing.T) {
 		tr := int32(99)
 		b, err := json.Marshal(txmgr.TxMeta{JobID: &tr})
 		require.NoError(t, err)
-		meta := datatypes.JSON(b)
+		meta := json.RawMessage(b)
 		earlierEthTx := txmgr.Tx{
 			FromAddress:    fromAddress,
 			ToAddress:      toAddress,

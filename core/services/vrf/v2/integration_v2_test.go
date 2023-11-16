@@ -71,7 +71,6 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/services/keystore/keys/ethkey"
 	"github.com/smartcontractkit/chainlink/v2/core/services/keystore/keys/vrfkey"
 	"github.com/smartcontractkit/chainlink/v2/core/services/pg"
-	"github.com/smartcontractkit/chainlink/v2/core/services/pg/datatypes"
 	"github.com/smartcontractkit/chainlink/v2/core/services/pipeline"
 	evmrelay "github.com/smartcontractkit/chainlink/v2/core/services/relay/evm"
 	"github.com/smartcontractkit/chainlink/v2/core/services/signatures/secp256k1"
@@ -2038,13 +2037,13 @@ func TestStartingCountsV1(t *testing.T) {
 	}
 	md1, err := json.Marshal(&m1)
 	require.NoError(t, err)
-	md1_ := datatypes.JSON(md1)
+	md1_ := json.RawMessage(md1)
 	reqID2 := utils.PadByteToHash(0x11)
 	m2 := txmgr.TxMeta{
 		RequestID: &reqID2,
 	}
 	md2, err := json.Marshal(&m2)
-	md2_ := datatypes.JSON(md2)
+	md2_ := json.RawMessage(md2)
 	require.NoError(t, err)
 	chainID := utils.NewBig(testutils.SimulatedChainID)
 	confirmedTxes := []txmgr.Tx{
@@ -2056,7 +2055,7 @@ func TestStartingCountsV1(t *testing.T) {
 			InitialBroadcastAt: &b,
 			CreatedAt:          b,
 			State:              txmgrcommon.TxConfirmed,
-			Meta:               &datatypes.JSON{},
+			Meta:               &json.RawMessage{},
 			EncodedPayload:     []byte{},
 			ChainID:            chainID.ToInt(),
 		},
@@ -2114,7 +2113,7 @@ func TestStartingCountsV1(t *testing.T) {
 			State:              txmgrcommon.TxUnconfirmed,
 			BroadcastAt:        &b,
 			InitialBroadcastAt: &b,
-			Meta:               (*datatypes.JSON)(&md),
+			Meta:               (*json.RawMessage)(&md),
 			EncodedPayload:     []byte{},
 			ChainID:            chainID.ToInt(),
 		})
