@@ -28,14 +28,14 @@ func newChainReader(lggr logger.Logger, chain evm.Chain, ropts *types.RelayOpts)
 		return nil, relaytypes.ErrorChainReaderUnsupported{}
 	}
 
-	if err = ValidateChainReaderConfig(*relayConfig.ChainReader); err != nil {
+	if err = validateChainReaderConfig(*relayConfig.ChainReader); err != nil {
 		return nil, fmt.Errorf("invalid ChainReader configuration: %w", err)
 	}
 
 	return NewChainReaderService(lggr, chain.LogPoller())
 }
 
-func ValidateChainReaderConfig(cfg types.ChainReaderConfig) error {
+func validateChainReaderConfig(cfg types.ChainReaderConfig) error {
 	for contractName, chainContractReader := range cfg.ChainContractReaders {
 		abi, err := abi.JSON(strings.NewReader(chainContractReader.ContractABI))
 		if err != nil {
