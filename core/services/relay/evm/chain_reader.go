@@ -18,17 +18,12 @@ import (
 )
 
 // constructor for ChainReader, returns nil if there is any error
-func newChainReader(lggr logger.Logger, chain evm.Chain, ropts *types.RelayOpts) (*chainReader, error) {
-	relayConfig, err := ropts.RelayConfig()
-	if err != nil {
-		return nil, fmt.Errorf("Failed parsing RelayConfig: %w", err)
-	}
-
+func newChainReader(lggr logger.Logger, chain evm.Chain, relayConfig types.RelayConfig) (*chainReader, error) {
 	if relayConfig.ChainReader == nil {
 		return nil, relaytypes.ErrorChainReaderUnsupported{}
 	}
 
-	if err = validateChainReaderConfig(*relayConfig.ChainReader); err != nil {
+	if err := validateChainReaderConfig(*relayConfig.ChainReader); err != nil {
 		return nil, fmt.Errorf("invalid ChainReader configuration: %w", err)
 	}
 
@@ -49,10 +44,10 @@ func validateChainReaderConfig(cfg types.ChainReaderConfig) error {
 			case types.Event:
 				err = validateEvents(abi, chainReaderDefinition)
 			default:
-				return fmt.Errorf("invalid chain reader definition read type: %d", chainReaderDefinition.ReadType)
+				return fmt.Errorf("%w: invalid chain reader definition read type: %d", relaytypes.ErrorChainReaderInvalidConfig{}, chainReaderDefinition.ReadType)
 			}
 			if err != nil {
-				return fmt.Errorf("invalid chain reader config for contract: %q chain reading definition: %q, err: %w", contractName, chainReadingDefinitionName, err)
+				return fmt.Errorf("%w: invalid chain reader config for contract: %q chain reading definition: %q, err: %w", relaytypes.ErrorChainReaderInvalidConfig{}, contractName, chainReadingDefinitionName, err)
 			}
 		}
 	}

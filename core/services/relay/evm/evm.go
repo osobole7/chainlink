@@ -528,7 +528,7 @@ func (r *Relayer) NewMedianProvider(rargs relaytypes.RelayArgs, pargs relaytypes
 		medianContract:      medianContract,
 	}
 
-	chainReader, err := newChainReader(lggr, r.chain, relayOpts)
+	chainReader, err := newChainReader(lggr, r.chain, relayConfig)
 	if err != nil {
 		logMsg := "Falling back to legacy MedianContract impl from Provider"
 		if errors.Is(err, relaytypes.ErrorChainReaderUnsupported{}) || errors.Is(err, relaytypes.ErrorNoChainReaderInJobSpec{}) {
