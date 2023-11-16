@@ -17,7 +17,6 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm"
 	"github.com/smartcontractkit/chainlink/v2/core/logger"
 	"github.com/smartcontractkit/chainlink/v2/core/services/job"
-	"github.com/smartcontractkit/chainlink/v2/core/services/keystore"
 	"github.com/smartcontractkit/chainlink/v2/core/services/keystore/keys/ethkey"
 	"github.com/smartcontractkit/chainlink/v2/core/services/ocr2/models"
 	kevm20 "github.com/smartcontractkit/chainlink/v2/core/services/ocr2/plugins/ocr2keeper/evm20"
@@ -44,9 +43,9 @@ var (
 	ErrNoChainFromSpec = fmt.Errorf("could not create chain from spec")
 )
 
-func EVMProvider(db *sqlx.DB, chain evm.Chain, lggr logger.Logger, spec job.Job, pr pipeline.Runner, ethKs keystore.Eth) (evmrelay.OCR2KeeperProvider, error) {
+func EVMProvider(db *sqlx.DB, chain evm.Chain, lggr logger.Logger, spec job.Job, pr pipeline.Runner) (evmrelay.OCR2KeeperProvider, error) {
 	oSpec := spec.OCR2OracleSpec
-	ocr2keeperRelayer := evmrelay.NewOCR2KeeperRelayer(db, chain, pr, spec, lggr.Named("OCR2KeeperRelayer"), ethKs)
+	ocr2keeperRelayer := evmrelay.NewOCR2KeeperRelayer(db, chain, pr, spec, lggr.Named("OCR2KeeperRelayer"))
 
 	keeperProvider, err := ocr2keeperRelayer.NewOCR2KeeperProvider(
 		types.RelayArgs{
@@ -73,7 +72,6 @@ func EVMDependencies20(
 	lggr logger.Logger,
 	chain evm.Chain,
 	pr pipeline.Runner,
-	ethKs keystore.Eth,
 ) (evmrelay.OCR2KeeperProvider, *kevm20.EvmRegistry, Encoder20, *kevm20.LogProvider, error) {
 	var err error
 
@@ -81,7 +79,7 @@ func EVMDependencies20(
 	var registry *kevm20.EvmRegistry
 
 	// the provider will be returned as a dependency
-	if keeperProvider, err = EVMProvider(db, chain, lggr, spec, pr, ethKs); err != nil {
+	if keeperProvider, err = EVMProvider(db, chain, lggr, spec, pr); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
@@ -118,14 +116,13 @@ func EVMDependencies21(
 	mc *models.MercuryCredentials,
 	keyring ocrtypes.OnchainKeyring,
 	dbCfg pg.QConfig,
-	ethKs keystore.Eth,
 ) (evmrelay.OCR2KeeperProvider, kevm21.AutomationServices, error) {
 	var err error
 	var keeperProvider evmrelay.OCR2KeeperProvider
 
 	oSpec := spec.OCR2OracleSpec
 	// the provider will be returned as a dependency
-	if keeperProvider, err = EVMProvider(db, chain, lggr, spec, pr, ethKs); err != nil {
+	if keeperProvider, err = EVMProvider(db, chain, lggr, spec, pr); err != nil {
 		return nil, nil, err
 	}
 
