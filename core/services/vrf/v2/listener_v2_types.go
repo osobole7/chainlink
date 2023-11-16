@@ -228,9 +228,11 @@ func (lsn *listenerV2) processBatch(
 		}
 
 		maxLink, maxEth := accumulateMaxLinkAndMaxEth(batch)
-		txHashes := []common.Hash{}
+		var (
+			txHashes    []common.Hash
+			reqIDHashes []common.Hash
+		)
 		copy(txHashes, batch.txHashes)
-		reqIDHashes := []common.Hash{}
 		for _, reqID := range batch.reqIDs {
 			reqIDHashes = append(reqIDHashes, common.BytesToHash(reqID.Bytes()))
 		}
@@ -249,8 +251,11 @@ func (lsn *listenerV2) processBatch(
 				RequestTxHashes: txHashes,
 			},
 		})
+		if err != nil {
+			return fmt.Errorf("create batch fulfillment eth transaction: %w", err)
+		}
 
-		return fmt.Errorf("create batch fulfillment eth transaction: %w", err)
+		return nil
 	})
 	if err != nil {
 		ll.Errorw("Error enqueuing batch fulfillments, requeuing requests", "err", err)
