@@ -20,11 +20,16 @@ import (
 // constructor for ChainReader, returns nil if there is any error
 func newChainReader(lggr logger.Logger, chain evm.Chain, relayConfig types.RelayConfig) (*chainReader, error) {
 	if relayConfig.ChainReader == nil {
+		err := relaytypes.ErrorChainReaderUnsupported{}
+		// until chain reader is not the default, this should be logged as info here
+		lggr.Infow(err.Error())
 		return nil, relaytypes.ErrorChainReaderUnsupported{}
 	}
 
 	if err := validateChainReaderConfig(*relayConfig.ChainReader); err != nil {
-		return nil, fmt.Errorf("invalid ChainReader configuration: %w", err)
+		err = fmt.Errorf("%w: %w", relaytypes.ErrorChainReaderInvalidConfig{}, err)
+		lggr.Errorw(err.Error())
+		return nil, err
 	}
 
 	return NewChainReaderService(lggr, chain.LogPoller())
