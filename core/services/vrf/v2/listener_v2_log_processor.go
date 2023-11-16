@@ -236,7 +236,7 @@ func (lsn *listenerV2) MaybeSubtractReservedLink(ctx context.Context, startBalan
 
 	txes, err := lsn.chain.TxManager().FindTxesByMetaFieldAndStates(ctx, metaField, subID.String(), reserveEthLinkQueryStates, chainID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.Wrap(err, "TXM FindTxesByMetaFieldAndStates failed")
+		return nil, fmt.Errorf("TXM FindTxesByMetaFieldAndStates failed: %w", err)
 	}
 
 	reservedLinkSum := big.NewInt(0)
@@ -245,7 +245,7 @@ func (lsn *listenerV2) MaybeSubtractReservedLink(ctx context.Context, startBalan
 		var meta *txmgrtypes.TxMeta[common.Address, common.Hash]
 		meta, err = tx.GetMeta()
 		if err != nil {
-			return nil, errors.Wrap(err, "GetMeta for Tx failed")
+			return nil, fmt.Errorf("GetMeta for Tx failed: %w", err)
 		}
 		if meta != nil && meta.MaxLink != nil {
 			txMaxLink, success := new(big.Int).SetString(*meta.MaxLink, 10)
@@ -275,7 +275,7 @@ func (lsn *listenerV2) MaybeSubtractReservedEth(ctx context.Context, startBalanc
 	}
 	txes, err := lsn.chain.TxManager().FindTxesByMetaFieldAndStates(ctx, metaField, subID.String(), reserveEthLinkQueryStates, chainID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.Wrap(err, "TXM FindTxesByMetaFieldAndStates failed")
+		return nil, fmt.Errorf("TXM FindTxesByMetaFieldAndStates failed: %w", err)
 	}
 
 	reservedEthSum := big.NewInt(0)
@@ -284,7 +284,7 @@ func (lsn *listenerV2) MaybeSubtractReservedEth(ctx context.Context, startBalanc
 		var meta *txmgrtypes.TxMeta[common.Address, common.Hash]
 		meta, err = tx.GetMeta()
 		if err != nil {
-			return nil, errors.Wrap(err, "GetMeta for Tx failed")
+			return nil, fmt.Errorf("GetMeta for Tx failed: %w", err)
 		}
 		if meta != nil && meta.MaxEth != nil {
 			txMaxEth, success := new(big.Int).SetString(*meta.MaxEth, 10)
@@ -601,7 +601,7 @@ func (lsn *listenerV2) enqueueForceFulfillment(
 		lsn.l.Infow("fulfillRandomWords payload", "proof", p.proof, "commitment", p.reqCommitment.Get(), "payload", p.payload)
 		txData := hexutil.MustDecode(p.payload)
 		if err != nil {
-			return errors.Wrap(err, "abi pack VRFOwner.fulfillRandomWords")
+			return fmt.Errorf("abi pack VRFOwner.fulfillRandomWords: %w", err)
 		}
 		estimateGasLimit, err := lsn.chain.Client().EstimateGas(ctx, ethereum.CallMsg{
 			From: fromAddress,
@@ -609,7 +609,7 @@ func (lsn *listenerV2) enqueueForceFulfillment(
 			Data: txData,
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to estimate gas on VRFOwner.fulfillRandomWords")
+			return fmt.Errorf("failed to estimate gas on VRFOwner.fulfillRandomWords: %w", err)
 		}
 
 		lsn.l.Infow("Estimated gas limit on force fulfillment",
@@ -991,7 +991,7 @@ func (lsn *listenerV2) checkReqsFulfilled(ctx context.Context, l logger.Logger, 
 		payload, err := lsn.requestCommitmentPayload(req.req.RequestID())
 		if err != nil {
 			// This shouldn't happen
-			return fulfilled, errors.Wrap(err, "creating getCommitment payload")
+			return fulfilled, fmt.Errorf("creating getCommitment payload: %w", err)
 		}
 
 		reqBlockNumber := new(big.Int).SetUint64(req.req.Raw().BlockNumber)
@@ -1018,7 +1018,7 @@ func (lsn *listenerV2) checkReqsFulfilled(ctx context.Context, l logger.Logger, 
 
 	err := lsn.chain.Client().BatchCallContext(ctx, calls)
 	if err != nil {
-		return fulfilled, errors.Wrap(err, "making batch call")
+		return fulfilled, fmt.Errorf("making batch call: %w", err)
 	}
 
 	var errs error
@@ -1101,7 +1101,7 @@ func (lsn *listenerV2) estimateFee(
 	defer cancel()
 	roundData, err := lsn.aggregator.LatestRoundData(&bind.CallOpts{Context: callCtx})
 	if err != nil {
-		return nil, errors.Wrap(err, "get aggregator latestAnswer")
+		return nil, fmt.Errorf("get aggregator latestAnswer: %w", err)
 	}
 
 	return EstimateFeeJuels(
@@ -1153,7 +1153,7 @@ func (lsn *listenerV2) simulateFulfillment(
 	var trrs pipeline.TaskRunResults
 	res.run, trrs, err = lsn.pipelineRunner.ExecuteRun(ctx, *lsn.job.PipelineSpec, vars, lg)
 	if err != nil {
-		res.err = errors.Wrap(err, "executing run")
+		res.err = fmt.Errorf("executing run: %w", err)
 		return res
 	}
 	// The call task will fail if there are insufficient funds

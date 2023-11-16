@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm/logpoller"
@@ -17,7 +15,6 @@ import (
 	"github.com/smartcontractkit/chainlink/v2/core/logger"
 	"github.com/smartcontractkit/chainlink/v2/core/services/pg"
 	"github.com/smartcontractkit/chainlink/v2/core/services/vrf/vrfcommon"
-	"github.com/smartcontractkit/chainlink/v2/core/utils"
 	"github.com/smartcontractkit/chainlink/v2/core/utils/mathutil"
 )
 
@@ -27,7 +24,7 @@ func (lsn *listenerV2) runLogListener(
 ) {
 	lsn.l.Infow("Listening for run requests via log poller",
 		"minConfs", minConfs)
-	ticker := time.NewTicker(utils.WithJitter(pollPeriod / 2))
+	ticker := time.NewTicker(pollPeriod / 2)
 	defer ticker.Stop()
 	var (
 		lastProcessedBlock int64
@@ -108,7 +105,7 @@ func (lsn *listenerV2) initializeLastProcessedBlock(ctx context.Context) (lastPr
 	// will retry on error in the runLogListener loop
 	latestBlock, err := lp.LatestBlock()
 	if err != nil {
-		return 0, errors.Wrap(err, "LogPoller.LatestBlock()")
+		return 0, fmt.Errorf("LogPoller.LatestBlock(): %w", err)
 	}
 	fromTimestamp := time.Now().UTC().Add(-lsn.job.VRFSpec.RequestTimeout)
 	ll := lsn.l.With(
@@ -124,7 +121,7 @@ func (lsn *listenerV2) initializeLastProcessedBlock(ctx context.Context) (lastPr
 	ll.Debugw("running replay on log poller")
 	err = lp.Replay(ctx, mathutil.Max(latestBlock.FinalizedBlockNumber-numBlocksToReplay, 1))
 	if err != nil {
-		return 0, errors.Wrap(err, "LogPoller.Replay")
+		return 0, fmt.Errorf("LogPoller.Replay: %w", err)
 	}
 
 	// get randomness requested logs with the appropriate keyhash
@@ -138,7 +135,7 @@ func (lsn *listenerV2) initializeLastProcessedBlock(ctx context.Context) (lastPr
 		logpoller.Finalized, // confs
 	)
 	if err != nil {
-		return 0, errors.Wrap(err, "LogPoller.LogsCreatedAfter RandomWordsRequested logs")
+		return 0, fmt.Errorf("LogPoller.LogsCreatedAfter RandomWordsRequested logs: %w", err)
 	}
 
 	// fulfillments don't have keyhash indexed, we'll have to get all of them
@@ -150,23 +147,20 @@ func (lsn *listenerV2) initializeLastProcessedBlock(ctx context.Context) (lastPr
 		logpoller.Finalized,                         // confs
 	)
 	if err != nil {
-		return 0, errors.Wrap(err, "LogPoller.LogsCreatedAfter RandomWordsFulfilled logs")
+		return 0, fmt.Errorf("LogPoller.LogsCreatedAfter RandomWordsFulfilled logs: %w", err)
 	}
 
 	unfulfilled, _, _ := lsn.getUnfulfilled(append(requests, fulfillments...), ll)
-	var earliestUnfulfilledBlock int64 = math.MaxInt64
+	// find request block of earliest unfulfilled request
+	// even if this block is > latest finalized, we use latest finalized as earliest unprocessed
+	// because re-orgs can occur on any unfinalized block.
+	var earliestUnfulfilledBlock = latestBlock.FinalizedBlockNumber
 	for _, req := range unfulfilled {
 		if req.Raw().BlockNumber < uint64(earliestUnfulfilledBlock) {
 			earliestUnfulfilledBlock = int64(req.Raw().BlockNumber)
 		}
 	}
-	if earliestUnfulfilledBlock == math.MaxInt64 {
-		// no unfulfilled requests
-		return latestBlock.FinalizedBlockNumber, nil
-	}
 
-	// earliestUnfulfilledBlock is <= latestBlock.FinalizedBlockNumber because in our queries we specify
-	// logpoller.Finalized as the number of confirmations, so it's impossible for this not to be the case.
 	return earliestUnfulfilledBlock, nil
 }
 
@@ -177,7 +171,7 @@ func (lsn *listenerV2) updateLastProcessedBlock(ctx context.Context, currLastPro
 	latestBlock, err := lp.LatestBlock(pg.WithParentCtx(ctx))
 	if err != nil {
 		lsn.l.Errorw("error getting latest block", "err", err)
-		return 0, errors.Wrap(err, "LogPoller.LatestBlock()")
+		return 0, fmt.Errorf("LogPoller.LatestBlock(): %w", err)
 	}
 	ll := lsn.l.With(
 		"currLastProcessedBlock", currLastProcessedBlock,
@@ -196,27 +190,20 @@ func (lsn *listenerV2) updateLastProcessedBlock(ctx context.Context, currLastPro
 		pg.WithParentCtx(ctx),
 	)
 	if err != nil {
-		return currLastProcessedBlock, errors.Wrap(err, "LogPoller.LogsWithSigs")
+		return currLastProcessedBlock, fmt.Errorf("LogPoller.LogsWithSigs: %w", err)
 	}
 
 	unfulfilled, _, _ := lsn.getUnfulfilled(logs, ll)
 	// find request block of earliest unfulfilled request
-	var earliestUnprocessedRequestBlock int64 = math.MaxInt64
+	// even if this block is > latest finalized, we use latest finalized as earliest unprocessed
+	// because re-orgs can occur on any unfinalized block.
+	var earliestUnprocessedRequestBlock = latestBlock.FinalizedBlockNumber
 	for _, req := range unfulfilled {
 		if req.Raw().BlockNumber < uint64(earliestUnprocessedRequestBlock) {
 			earliestUnprocessedRequestBlock = int64(req.Raw().BlockNumber)
 		}
 	}
 
-	// cases:
-	// 1. pending requests exist, earliestUnprocessedRequestBlock < latestBlock.FinalizedBlockNumber
-	// 2. pending requests exist, earliestUnprocessedRequestBlock > latestBlock.FinalizedBlockNumber
-	// 3. no pending requests, earliestUnprocessedRequestBlock == math.MaxInt64
-	// case 2 or 3
-	if earliestUnprocessedRequestBlock == math.MaxInt64 || earliestUnprocessedRequestBlock > latestBlock.FinalizedBlockNumber {
-		return latestBlock.FinalizedBlockNumber, nil
-	}
-	// case 1
 	return earliestUnprocessedRequestBlock, nil
 }
 
@@ -230,7 +217,7 @@ func (lsn *listenerV2) pollLogs(ctx context.Context, minConfs uint32, lastProces
 	// if we want to fulfill on time.
 	latestBlock, err := lp.LatestBlock()
 	if err != nil {
-		return nil, errors.Wrap(err, "LogPoller.LatestBlock()")
+		return nil, fmt.Errorf("LogPoller.LatestBlock(): %w", err)
 	}
 	lsn.setLatestHead(latestBlock)
 	ll := lsn.l.With(
@@ -253,7 +240,7 @@ func (lsn *listenerV2) pollLogs(ctx context.Context, minConfs uint32, lastProces
 		pg.WithParentCtx(ctx),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "LogPoller.LogsWithSigs")
+		return nil, fmt.Errorf("LogPoller.LogsWithSigs: %w", err)
 	}
 
 	unfulfilled, unfulfilledLP, fulfilled := lsn.getUnfulfilled(logs, ll)

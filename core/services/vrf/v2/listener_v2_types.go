@@ -1,11 +1,11 @@
 package v2
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	heaps "github.com/theodesp/go-heaps"
 
 	txmgrcommon "github.com/smartcontractkit/chainlink/v2/common/txmgr"
@@ -224,7 +224,7 @@ func (lsn *listenerV2) processBatch(
 	var ethTX txmgr.Tx
 	err = lsn.q.Transaction(func(tx pg.Queryer) error {
 		if err = lsn.pipelineRunner.InsertFinishedRuns(batch.runs, true, pg.WithQueryer(tx)); err != nil {
-			return errors.Wrap(err, "inserting finished pipeline runs")
+			return fmt.Errorf("inserting finished pipeline runs: %w", err)
 		}
 
 		maxLink, maxEth := accumulateMaxLinkAndMaxEth(batch)
@@ -250,7 +250,7 @@ func (lsn *listenerV2) processBatch(
 			},
 		})
 
-		return errors.Wrap(err, "create batch fulfillment eth transaction")
+		return fmt.Errorf("create batch fulfillment eth transaction: %w", err)
 	})
 	if err != nil {
 		ll.Errorw("Error enqueuing batch fulfillments, requeuing requests", "err", err)
