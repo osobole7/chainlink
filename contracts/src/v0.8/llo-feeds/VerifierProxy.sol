@@ -98,12 +98,6 @@ contract VerifierProxy is IVerifierProxy, OwnerIsCreator, TypeAndVersionInterfac
     _;
   }
 
-  modifier onlyValidVerifier(address verifierAddress) {
-    if (verifierAddress == address(0)) revert ZeroAddress();
-    if (!IERC165(verifierAddress).supportsInterface(IVerifier.verify.selector)) revert VerifierInvalid();
-    _;
-  }
-
   /// @inheritdoc TypeAndVersionInterface
   function typeAndVersion() external pure override returns (string memory) {
     return "VerifierProxy 2.0.0";
@@ -155,7 +149,10 @@ contract VerifierProxy is IVerifierProxy, OwnerIsCreator, TypeAndVersionInterfac
   }
 
   /// @inheritdoc IVerifierProxy
-  function initializeVerifier(address verifierAddress) external override onlyOwner onlyValidVerifier(verifierAddress) {
+  function initializeVerifier(address verifierAddress) external override onlyOwner {
+    if (verifierAddress == address(0)) revert ZeroAddress();
+    if (!IERC165(verifierAddress).supportsInterface(IVerifier.verify.selector)) revert VerifierInvalid();
+
     if (s_initializedVerifiers[verifierAddress]) revert VerifierAlreadyInitialized(verifierAddress);
 
     s_initializedVerifiers[verifierAddress] = true;
