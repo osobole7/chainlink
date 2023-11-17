@@ -1,21 +1,46 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import {ConfirmedOwner} from "../shared/access/ConfirmedOwner.sol";
-import {IRewardManager} from "./interfaces/IRewardManager.sol";
-import {IERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC20.sol";
 import {TypeAndVersionInterface} from "../interfaces/TypeAndVersionInterface.sol";
-import {Common} from "./libraries/Common.sol";
-import {SafeERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/utils/SafeERC20.sol";
+import {OwnerIsCreator} from "../shared/access/OwnerIsCreator.sol";
+import {IRewardManager} from "./interfaces/IRewardManager.sol";
 
-/**
- * @title RewardManager
- * @author Michael Fletcher
- * @author Austin Born
- * @notice This contract will be used to reward any configured recipients within a pool. Recipients will receive a share of their pool relative to their configured weight.
- */
-contract RewardManager is IRewardManager, ConfirmedOwner, TypeAndVersionInterface {
+import {Common} from "./libraries/Common.sol";
+
+import {SafeERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC20.sol";
+
+/// @title RewardManager
+/// @author Michael Fletcher
+/// @author Austin Born
+/// @notice This contract will be used to reward any configured recipients within a pool. Recipients
+/// will receive a share of their pool relative to their configured weight.
+contract RewardManager is IRewardManager, OwnerIsCreator, TypeAndVersionInterface {
   using SafeERC20 for IERC20;
+
+  // @notice Thrown whenever the RewardRecipient weights are invalid
+  error InvalidWeights();
+
+  // @notice Thrown when any given address is invalid
+  error InvalidAddress();
+
+  // @notice Thrown when the pool id is invalid
+  error InvalidPoolId();
+
+  // @notice Thrown when the calling contract is not within the authorized contracts
+  error Unauthorized();
+
+  // @notice Thrown when getAvailableRewardPoolIds parameters are incorrectly set
+  error InvalidPoolLength();
+
+  // Events emitted upon state change
+  event RewardRecipientsUpdated(bytes32 indexed poolId, Common.AddressAndWeight[] newRewardRecipients);
+  event RewardsClaimed(bytes32 indexed poolId, address indexed recipient, uint192 quantity);
+  event FeeManagerUpdated(address newFeeManagerAddress);
+  event FeePaid(FeePayment[] payments, address payer);
+
+  // solhint-disable-next-line chainlink-solidity/all-caps-constant-storage-variables
+  string public constant override typeAndVersion = "RewardManager 1.1.0";
 
   // @dev The mapping of total fees collected for a particular pot: s_totalRewardRecipientFees[poolId]
   mapping(bytes32 => uint256) public s_totalRewardRecipientFees;
@@ -41,41 +66,12 @@ contract RewardManager is IRewardManager, ConfirmedOwner, TypeAndVersionInterfac
   // The fee manager address
   address public s_feeManagerAddress;
 
-  // @notice Thrown whenever the RewardRecipient weights are invalid
-  error InvalidWeights();
-
-  // @notice Thrown when any given address is invalid
-  error InvalidAddress();
-
-  // @notice Thrown when the pool id is invalid
-  error InvalidPoolId();
-
-  // @notice Thrown when the calling contract is not within the authorized contracts
-  error Unauthorized();
-
-  // @notice Thrown when getAvailableRewardPoolIds parameters are incorrectly set
-  error InvalidPoolLength();
-
-  // Events emitted upon state change
-  event RewardRecipientsUpdated(bytes32 indexed poolId, Common.AddressAndWeight[] newRewardRecipients);
-  event RewardsClaimed(bytes32 indexed poolId, address indexed recipient, uint192 quantity);
-  event FeeManagerUpdated(address newFeeManagerAddress);
-  event FeePaid(FeePayment[] payments, address payer);
-
-  /**
-   * @notice Constructor
-   * @param linkAddress address of the wrapped LINK token
-   */
-  constructor(address linkAddress) ConfirmedOwner(msg.sender) {
-    //ensure that the address ia not zero
+  /// @notice Constructor
+  /// @param linkAddress address of the wrapped LINK token
+  constructor(address linkAddress) OwnerIsCreator() {
     if (linkAddress == address(0)) revert InvalidAddress();
 
     i_linkAddress = linkAddress;
-  }
-
-  // @inheritdoc TypeAndVersionInterface
-  function typeAndVersion() external pure override returns (string memory) {
-    return "RewardManager 1.1.0";
   }
 
   // @inheritdoc IERC165
@@ -83,23 +79,10 @@ contract RewardManager is IRewardManager, ConfirmedOwner, TypeAndVersionInterfac
     return interfaceId == this.onFeePaid.selector;
   }
 
-  modifier onlyOwnerOrFeeManager() {
-    if (msg.sender != owner() && msg.sender != s_feeManagerAddress) revert Unauthorized();
-    _;
-  }
-
-  modifier onlyOwnerOrRecipientInPool(bytes32 poolId) {
-    if (msg.sender != owner() && s_rewardRecipientWeights[poolId][msg.sender] == 0) revert Unauthorized();
-    _;
-  }
-
-  modifier onlyFeeManager() {
-    if (msg.sender != s_feeManagerAddress) revert Unauthorized();
-    _;
-  }
-
   /// @inheritdoc IRewardManager
-  function onFeePaid(FeePayment[] calldata payments, address payer) external override onlyFeeManager {
+  function onFeePaid(FeePayment[] calldata payments, address payer) external override {
+    if (msg.sender != s_feeManagerAddress) revert Unauthorized();
+
     uint256 totalFeeAmount;
     for (uint256 i; i < payments.length; ++i) {
       unchecked {
@@ -174,7 +157,8 @@ contract RewardManager is IRewardManager, ConfirmedOwner, TypeAndVersionInterfac
   function setRewardRecipients(
     bytes32 poolId,
     Common.AddressAndWeight[] calldata rewardRecipientAndWeights
-  ) external override onlyOwnerOrFeeManager {
+  ) external override {
+    if (msg.sender != owner() && msg.sender != s_feeManagerAddress) revert Unauthorized();
     //revert if there are no recipients to set
     if (rewardRecipientAndWeights.length == 0) revert InvalidAddress();
 
@@ -259,7 +243,9 @@ contract RewardManager is IRewardManager, ConfirmedOwner, TypeAndVersionInterfac
   }
 
   /// @inheritdoc IRewardManager
-  function payRecipients(bytes32 poolId, address[] calldata recipients) external onlyOwnerOrRecipientInPool(poolId) {
+  function payRecipients(bytes32 poolId, address[] calldata recipients) external {
+    if (msg.sender != owner() && s_rewardRecipientWeights[poolId][msg.sender] == 0) revert Unauthorized();
+
     //convert poolIds to an array to match the interface of _claimRewards
     bytes32[] memory poolIdsArray = new bytes32[](1);
     poolIdsArray[0] = poolId;

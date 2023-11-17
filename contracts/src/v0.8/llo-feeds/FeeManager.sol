@@ -1,56 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import {ConfirmedOwner} from "../shared/access/ConfirmedOwner.sol";
-import {IFeeManager} from "./interfaces/IFeeManager.sol";
 import {TypeAndVersionInterface} from "../interfaces/TypeAndVersionInterface.sol";
-import {IERC165} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC165.sol";
-import {Common} from "./libraries/Common.sol";
+import {IFeeManager} from "./interfaces/IFeeManager.sol";
 import {IRewardManager} from "./interfaces/IRewardManager.sol";
 import {IWERC20} from "../shared/interfaces/IWERC20.sol";
-import {IERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC20.sol";
-import {Math} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/utils/math/Math.sol";
-import {SafeERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IVerifierFeeManager} from "./interfaces/IVerifierFeeManager.sol";
 
-/**
- * @title FeeManager
- * @author Michael Fletcher
- * @author Austin Born
- * @notice This contract is used for the handling of fees required for users verifying reports.
- */
-contract FeeManager is IFeeManager, ConfirmedOwner, TypeAndVersionInterface {
+import {OwnerIsCreator} from "../shared/access/OwnerIsCreator.sol";
+import {Common} from "./libraries/Common.sol";
+
+import {IERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/utils/math/Math.sol";
+import {IERC165} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC165.sol";
+
+/// @title FeeManager
+/// @author Michael Fletcher
+/// @author Austin Born
+/// @notice This contract is used for the handling of fees required for users verifying reports.
+contract FeeManager is IFeeManager, OwnerIsCreator, TypeAndVersionInterface {
   using SafeERC20 for IERC20;
-
-  /// @notice list of subscribers and their discounts subscriberDiscounts[subscriber][feedId][token]
-  mapping(address => mapping(bytes32 => mapping(address => uint256))) public s_subscriberDiscounts;
-
-  /// @notice keep track of any subsidised link that is owed to the reward manager.
-  mapping(bytes32 => uint256) public s_linkDeficit;
-
-  /// @notice the total discount that can be applied to a fee, 1e18 = 100% discount
-  uint64 private constant PERCENTAGE_SCALAR = 1e18;
-
-  /// @notice the LINK token address
-  address public immutable i_linkAddress;
-
-  /// @notice the native token address
-  address public immutable i_nativeAddress;
-
-  /// @notice the proxy address
-  address public immutable i_proxyAddress;
-
-  /// @notice the reward manager address
-  IRewardManager public immutable i_rewardManager;
-
-  // @notice the mask to apply to get the report version
-  bytes32 private constant REPORT_VERSION_MASK = 0xffff000000000000000000000000000000000000000000000000000000000000;
-
-  // @notice the different report versions
-  bytes32 private constant REPORT_V1 = 0x0001000000000000000000000000000000000000000000000000000000000000;
-
-  /// @notice the surcharge fee to be paid if paying in native
-  uint256 public s_nativeSurcharge;
 
   /// @notice the error thrown if the discount or surcharge is invalid
   error InvalidSurcharge();
@@ -120,6 +90,39 @@ contract FeeManager is IFeeManager, ConfirmedOwner, TypeAndVersionInterface {
     uint256 appliedDiscount
   );
 
+  // solhint-disable-next-line chainlink-solidity/all-caps-constant-storage-variables
+  string public constant override typeAndVersion = "FeeManager 2.0.0";
+
+  /// @notice list of subscribers and their discounts subscriberDiscounts[subscriber][feedId][token]
+  mapping(address => mapping(bytes32 => mapping(address => uint256))) public s_subscriberDiscounts;
+
+  /// @notice keep track of any subsidised link that is owed to the reward manager.
+  mapping(bytes32 => uint256) public s_linkDeficit;
+
+  /// @notice the total discount that can be applied to a fee, 1e18 = 100% discount
+  uint64 private constant PERCENTAGE_SCALAR = 1e18;
+
+  /// @notice the LINK token address
+  address public immutable i_linkAddress;
+
+  /// @notice the native token address
+  address public immutable i_nativeAddress;
+
+  /// @notice the proxy address
+  address public immutable i_proxyAddress;
+
+  /// @notice the reward manager address
+  IRewardManager public immutable i_rewardManager;
+
+  // @notice the mask to apply to get the report version
+  bytes32 private constant REPORT_VERSION_MASK = 0xffff000000000000000000000000000000000000000000000000000000000000;
+
+  // @notice the different report versions
+  bytes32 private constant REPORT_V1 = 0x0001000000000000000000000000000000000000000000000000000000000000;
+
+  /// @notice the surcharge fee to be paid if paying in native
+  uint256 public s_nativeSurcharge;
+
   /**
    * @notice Construct the FeeManager contract
    * @param _linkAddress The address of the LINK token
@@ -132,7 +135,7 @@ contract FeeManager is IFeeManager, ConfirmedOwner, TypeAndVersionInterface {
     address _nativeAddress,
     address _proxyAddress,
     address _rewardManagerAddress
-  ) ConfirmedOwner(msg.sender) {
+  ) OwnerIsCreator() {
     if (
       _linkAddress == address(0) ||
       _nativeAddress == address(0) ||
@@ -148,19 +151,9 @@ contract FeeManager is IFeeManager, ConfirmedOwner, TypeAndVersionInterface {
     IERC20(i_linkAddress).approve(address(i_rewardManager), type(uint256).max);
   }
 
-  modifier onlyOwnerOrProxy() {
-    if (msg.sender != i_proxyAddress && msg.sender != owner()) revert Unauthorized();
-    _;
-  }
-
   modifier onlyProxy() {
     if (msg.sender != i_proxyAddress) revert Unauthorized();
     _;
-  }
-
-  /// @inheritdoc TypeAndVersionInterface
-  function typeAndVersion() external pure override returns (string memory) {
-    return "FeeManager 2.0.0";
   }
 
   /// @inheritdoc IERC165
@@ -308,7 +301,9 @@ contract FeeManager is IFeeManager, ConfirmedOwner, TypeAndVersionInterface {
   function setFeeRecipients(
     bytes32 configDigest,
     Common.AddressAndWeight[] calldata rewardRecipientAndWeights
-  ) external onlyOwnerOrProxy {
+  ) external {
+    if (msg.sender != i_proxyAddress && msg.sender != owner()) revert Unauthorized();
+
     i_rewardManager.setRewardRecipients(configDigest, rewardRecipientAndWeights);
   }
 

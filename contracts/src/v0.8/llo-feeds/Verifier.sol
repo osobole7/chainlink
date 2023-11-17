@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import {ConfirmedOwner} from "../shared/access/ConfirmedOwner.sol";
+import {TypeAndVersionInterface} from "../interfaces/TypeAndVersionInterface.sol";
 import {IVerifier} from "./interfaces/IVerifier.sol";
 import {IVerifierProxy} from "./interfaces/IVerifierProxy.sol";
-import {TypeAndVersionInterface} from "../interfaces/TypeAndVersionInterface.sol";
-import {IERC165} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC165.sol";
+
+import {OwnerIsCreator} from "../shared/access/OwnerIsCreator.sol";
 import {Common} from "./libraries/Common.sol";
 
-// OCR2 standard
-uint256 constant MAX_NUM_ORACLES = 31;
+import {IERC165} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC165.sol";
 
-/*
- * The verifier contract is used to verify offchain reports signed
- * by DONs. A report consists of a price, block number and feed Id. It
- * represents the observed price of an asset at a specified block number for
- * a feed. The verifier contract is used to verify that such reports have
- * been signed by the correct signers.
- **/
-contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
+/// @notice The verifier contract is used to verify offchain reports signed by DONs. A report
+/// consists of a price, block number and feed Id. It represents the observed price of an
+/// asset at a specified block number for a feed. The verifier contract is used to verify that
+/// such reports have been signed by the correct signers.
+contract Verifier is IVerifier, OwnerIsCreator, TypeAndVersionInterface {
+  // OCR2 standard
+  uint256 internal constant MAX_NUM_ORACLES = 31;
+
   // The first byte of the mask can be 0, because we only ever have 31 oracles
   uint256 internal constant ORACLE_MASK = 0x0001010101010101010101010101010101010101010101010101010101010101;
 
@@ -31,43 +30,31 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   }
 
   struct Signer {
-    // Index of oracle in a configuration
-    uint8 index;
-    // The oracle's role
-    Role role;
+    uint8 index; // ───╮ Index of oracle in a configuration
+    Role role; // ─────╯ The oracle's role
   }
 
   struct Config {
-    // Fault tolerance
-    uint8 f;
-    // Marks whether or not a configuration is active
-    bool isActive;
-    // Map of signer addresses to oracles
-    mapping(address => Signer) oracles;
+    uint8 f; // ───────╮ Fault tolerance
+    bool isActive; // ─╯ Marks whether or not a configuration is active
+    mapping(address => Signer) oracles; // Map of signer addresses to oracles
   }
 
   struct VerifierState {
-    // The number of times a new configuration
-    /// has been set
-    uint32 configCount;
-    // The block number of the block the last time
-    /// the configuration was updated.
-    uint32 latestConfigBlockNumber;
-    // The latest epoch a report was verified for
-    uint32 latestEpoch;
-    // Whether or not the verifier for this feed has been deactivated
-    bool isDeactivated;
-    /// The latest config digest set
-    bytes32 latestConfigDigest;
-    /// The historical record of all previously set configs by feedId
-    mapping(bytes32 => Config) s_verificationDataConfigs;
+    uint32 configCount; // ────────────╮ The number of times a new configuration has been set
+    uint32 latestConfigBlockNumber; // │ The block number of the block the last time  the configuration was updated.
+    uint32 latestEpoch; //             │ The latest epoch a report was verified for
+    bool isDeactivated; // ────────────╯ Whether or not the verifier for this feed has been deactivated
+    bytes32 latestConfigDigest; //       The latest config digest set
+    mapping(bytes32 => Config) verificationDataConfigs; // The historical record of all previously set configs by feedId
   }
 
   /// @notice This event is emitted when a new report is verified.
   /// It is used to keep a historical record of verified reports.
   event ReportVerified(bytes32 indexed feedId, address requester);
 
-  /// @notice This event is emitted whenever a new configuration is set for a feed.  It triggers a new run of the offchain reporting protocol.
+  /// @notice This event is emitted whenever a new configuration is set for a feed.  It triggers
+  /// a new run of the offchain reporting protocol.
   event ConfigSet(
     bytes32 indexed feedId,
     uint32 previousConfigBlockNumber,
@@ -93,23 +80,20 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   /// @notice This event is emitted whenever a feed is deactivated
   event FeedDeactivated(bytes32 indexed feedId);
 
-  /// @notice This error is thrown whenever an address tries
-  /// to exeecute a transaction that it is not authorized to do so
+  /// @notice This error is thrown whenever an address tries to execute a transaction that
+  /// it is not authorized to do so
   error AccessForbidden();
 
   /// @notice This error is thrown whenever a zero address is passed
   error ZeroAddress();
 
-  /// @notice This error is thrown whenever the feed ID passed in
-  /// a signed report is empty
+  /// @notice This error is thrown whenever the feed ID passed in a signed report is empty
   error FeedIdEmpty();
 
-  /// @notice This error is thrown whenever the config digest
-  /// is empty
+  /// @notice This error is thrown whenever the config digest is empty
   error DigestEmpty();
 
-  /// @notice This error is thrown whenever the config digest
-  /// passed in has not been set in this verifier
+  /// @notice This error is thrown whenever the config digest passed in has not been set in this verifier
   /// @param feedId The feed ID in the signed report
   /// @param configDigest The config digest that has not been set
   error DigestNotSet(bytes32 feedId, bytes32 configDigest);
@@ -120,18 +104,15 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   /// @param configDigest The config digest that is inactive
   error DigestInactive(bytes32 feedId, bytes32 configDigest);
 
-  /// @notice This error is thrown whenever trying to set a config
-  /// with a fault tolerance of 0
+  /// @notice This error is thrown whenever trying to set a config with a fault tolerance of 0
   error FaultToleranceMustBePositive();
 
-  /// @notice This error is thrown whenever a report is signed
-  /// with more than the max number of signers
+  /// @notice This error is thrown whenever a report is signed with more than the max number of signers
   /// @param numSigners The number of signers who have signed the report
   /// @param maxSigners The maximum number of signers that can sign a report
   error ExcessSigners(uint256 numSigners, uint256 maxSigners);
 
-  /// @notice This error is thrown whenever a report is signed
-  /// with less than the minimum number of signers
+  /// @notice This error is thrown whenever a report is signed with less than the minimum number of signers
   /// @param numSigners The number of signers who have signed the report
   /// @param minSigners The minimum number of signers that need to sign a report
   error InsufficientSigners(uint256 numSigners, uint256 minSigners);
@@ -143,8 +124,7 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   /// a report
   error IncorrectSignatureCount(uint256 numSigners, uint256 expectedNumSigners);
 
-  /// @notice This error is thrown whenever the R and S signer components
-  /// have different lengths
+  /// @notice This error is thrown whenever the R and S signer components have different lengths
   /// @param rsLength The number of r signature components
   /// @param ssLength The number of s signature components
   error MismatchedSignatures(uint256 rsLength, uint256 ssLength);
@@ -155,8 +135,7 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   /// @notice This error is thrown whenever a report fails to verify due to bad or duplicate signatures
   error BadVerification();
 
-  /// @notice This error is thrown whenever the admin tries to deactivate
-  /// the latest config digest
+  /// @notice This error is thrown whenever the admin tries to deactivate the latest config digest
   /// @param feedId The feed ID in the signed report
   /// @param configDigest The latest config digest
   error CannotDeactivateLatestConfig(bytes32 feedId, bytes32 configDigest);
@@ -169,6 +148,9 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   /// @param feedId The feed ID
   error InvalidFeed(bytes32 feedId);
 
+  // solhint-disable-next-line chainlink-solidity/all-caps-constant-storage-variables
+  string public constant override typeAndVersion = "Verifier 1.2.0";
+
   /// @notice The address of the verifier proxy
   address private immutable i_verifierProxyAddr;
 
@@ -176,7 +158,7 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   mapping(bytes32 => VerifierState) internal s_feedVerifierStates;
 
   /// @param verifierProxyAddr The address of the VerifierProxy contract
-  constructor(address verifierProxyAddr) ConfirmedOwner(msg.sender) {
+  constructor(address verifierProxyAddr) OwnerIsCreator() {
     if (verifierProxyAddr == address(0)) revert ZeroAddress();
     i_verifierProxyAddr = verifierProxyAddr;
   }
@@ -191,11 +173,6 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
   /// @inheritdoc IERC165
   function supportsInterface(bytes4 interfaceId) external pure override returns (bool isVerifier) {
     return interfaceId == this.verify.selector;
-  }
-
-  /// @inheritdoc TypeAndVersionInterface
-  function typeAndVersion() external pure override returns (string memory) {
-    return "Verifier 1.2.0";
   }
 
   /// @inheritdoc IVerifier
@@ -227,14 +204,12 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
     // reportContext[1]: 27 byte padding, 4-byte epoch and 1-byte round
     // reportContext[2]: ExtraHash
     bytes32 configDigest = reportContext[0];
-    Config storage s_config = feedVerifierState.s_verificationDataConfigs[configDigest];
+    Config storage s_config = feedVerifierState.verificationDataConfigs[configDigest];
 
     _validateReport(feedId, configDigest, rs, ss, s_config);
     _updateEpoch(reportContext, feedVerifierState);
+    _verifySignatures(keccak256(reportData), reportContext, rs, ss, rawVs, s_config);
 
-    bytes32 hashedReport = keccak256(reportData);
-
-    _verifySignatures(hashedReport, reportContext, rs, ss, rawVs, s_config);
     emit ReportVerified(feedId, sender);
 
     return reportData;
@@ -407,8 +382,8 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
       offchainConfig
     );
 
-    feedVerifierState.s_verificationDataConfigs[configDigest].f = f;
-    feedVerifierState.s_verificationDataConfigs[configDigest].isActive = true;
+    feedVerifierState.verificationDataConfigs[configDigest].f = f;
+    feedVerifierState.verificationDataConfigs[configDigest].isActive = true;
     for (uint8 i; i < signers.length; ++i) {
       address signerAddr = signers[i];
       if (signerAddr == address(0)) revert ZeroAddress();
@@ -417,10 +392,10 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
       // Here the contract checks to see if a signer's address has already
       // been set to ensure that the group of signer addresses that will
       // sign reports with the config digest are unique.
-      bool isSignerAlreadySet = feedVerifierState.s_verificationDataConfigs[configDigest].oracles[signerAddr].role !=
+      bool isSignerAlreadySet = feedVerifierState.verificationDataConfigs[configDigest].oracles[signerAddr].role !=
         Role.Unset;
       if (isSignerAlreadySet) revert NonUniqueSignatures();
-      feedVerifierState.s_verificationDataConfigs[configDigest].oracles[signerAddr] = Signer({
+      feedVerifierState.verificationDataConfigs[configDigest].oracles[signerAddr] = Signer({
         role: Role.Signer,
         index: i
       });
@@ -501,8 +476,9 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
     VerifierState storage feedVerifierState = s_feedVerifierStates[feedId];
 
     if (configDigest == bytes32("")) revert DigestEmpty();
-    if (feedVerifierState.s_verificationDataConfigs[configDigest].f == 0) revert DigestNotSet(feedId, configDigest);
-    feedVerifierState.s_verificationDataConfigs[configDigest].isActive = true;
+    if (feedVerifierState.verificationDataConfigs[configDigest].f == 0) revert DigestNotSet(feedId, configDigest);
+    feedVerifierState.verificationDataConfigs[configDigest].isActive = true;
+
     emit ConfigActivated(feedId, configDigest);
   }
 
@@ -511,11 +487,12 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
     VerifierState storage feedVerifierState = s_feedVerifierStates[feedId];
 
     if (configDigest == bytes32("")) revert DigestEmpty();
-    if (feedVerifierState.s_verificationDataConfigs[configDigest].f == 0) revert DigestNotSet(feedId, configDigest);
+    if (feedVerifierState.verificationDataConfigs[configDigest].f == 0) revert DigestNotSet(feedId, configDigest);
     if (configDigest == feedVerifierState.latestConfigDigest) {
       revert CannotDeactivateLatestConfig(feedId, configDigest);
     }
-    feedVerifierState.s_verificationDataConfigs[configDigest].isActive = false;
+    feedVerifierState.verificationDataConfigs[configDigest].isActive = false;
+
     emit ConfigDeactivated(feedId, configDigest);
   }
 
@@ -525,6 +502,7 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
 
     if (feedVerifierState.configCount == 0) revert InvalidFeed(feedId);
     feedVerifierState.isDeactivated = false;
+
     emit FeedActivated(feedId);
   }
 
@@ -534,6 +512,7 @@ contract Verifier is IVerifier, ConfirmedOwner, TypeAndVersionInterface {
 
     if (feedVerifierState.configCount == 0) revert InvalidFeed(feedId);
     feedVerifierState.isDeactivated = true;
+
     emit FeedDeactivated(feedId);
   }
 
