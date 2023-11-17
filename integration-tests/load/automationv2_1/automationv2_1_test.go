@@ -15,10 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/slack-go/slack"
-	ocr3 "github.com/smartcontractkit/libocr/offchainreporting2plus/ocr3confighelper"
-	ocr2keepers30config "github.com/smartcontractkit/ocr2keepers/pkg/v3/config"
-	"github.com/smartcontractkit/wasp"
 	"github.com/stretchr/testify/require"
+
+	ocr2keepers30config "github.com/smartcontractkit/chainlink-automation/pkg/v3/config"
+	ocr3 "github.com/smartcontractkit/libocr/offchainreporting2plus/ocr3confighelper"
+	"github.com/smartcontractkit/wasp"
 
 	"github.com/smartcontractkit/chainlink-testing-framework/blockchain"
 	"github.com/smartcontractkit/chainlink-testing-framework/k8s/config"

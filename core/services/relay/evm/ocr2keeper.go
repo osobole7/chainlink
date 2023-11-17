@@ -14,7 +14,8 @@ import (
 	"github.com/smartcontractkit/libocr/gethwrappers2/ocr2aggregator"
 	"github.com/smartcontractkit/libocr/offchainreporting2plus/chains/evmutil"
 	"github.com/smartcontractkit/libocr/offchainreporting2plus/ocr3types"
-	"github.com/smartcontractkit/ocr2keepers/pkg/v3/plugin"
+
+	"github.com/smartcontractkit/chainlink-automation/pkg/v3/plugin"
 
 	commontypes "github.com/smartcontractkit/chainlink-common/pkg/types"
 
