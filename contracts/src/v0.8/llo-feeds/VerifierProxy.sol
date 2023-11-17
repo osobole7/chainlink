@@ -45,7 +45,7 @@ contract VerifierProxy is IVerifierProxy, OwnerIsCreator, TypeAndVersionInterfac
   event FeeManagerSet(address oldFeeManager, address newFeeManager);
 
   /// @notice This error is thrown whenever an address tries
-  /// to exeecute a transaction that it is not authorized to do so
+  /// to execute a transaction that it is not authorized to do so
   error AccessForbidden();
 
   /// @notice This error is thrown whenever a zero address is passed
@@ -76,6 +76,9 @@ contract VerifierProxy is IVerifierProxy, OwnerIsCreator, TypeAndVersionInterfac
   /// @notice This error is thrown whenever billing fails.
   error BadVerification();
 
+  // solhint-disable-next-line chainlink-solidity/all-caps-constant-storage-variables
+  string public constant override typeAndVersion = "VerifierProxy 2.0.0";
+
   /// @notice Mapping of authorized verifiers
   mapping(address => bool) private s_initializedVerifiers;
 
@@ -96,11 +99,6 @@ contract VerifierProxy is IVerifierProxy, OwnerIsCreator, TypeAndVersionInterfac
     AccessControllerInterface ac = s_accessController;
     if (address(ac) != address(0) && !ac.hasAccess(msg.sender, msg.data)) revert AccessForbidden();
     _;
-  }
-
-  /// @inheritdoc TypeAndVersionInterface
-  function typeAndVersion() external pure override returns (string memory) {
-    return "VerifierProxy 2.0.0";
   }
 
   /// @inheritdoc IVerifierProxy
