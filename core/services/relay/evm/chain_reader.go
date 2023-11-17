@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	ocrtypes "github.com/smartcontractkit/libocr/offchainreporting2plus/types"
 
 	relaytypes "github.com/smartcontractkit/chainlink-relay/pkg/types"
@@ -18,7 +19,17 @@ import (
 )
 
 // constructor for ChainReader, returns nil if there is any error
-func newChainReader(lggr logger.Logger, chain evm.Chain, relayConfig types.RelayConfig) (*chainReader, error) {
+func newChainReader(lggr logger.Logger, chain evm.Chain, ropts *types.RelayOpts) (*chainReader, error) {
+	relayConfig, err := ropts.RelayConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing RelayConfig: %w", err)
+	}
+
+	if !common.IsHexAddress(ropts.ContractID) {
+		return nil, fmt.Errorf("invalid contractID, expected hex address")
+	}
+	contractID := common.HexToAddress(ropts.ContractID)
+
 	if relayConfig.ChainReader == nil {
 		err := relaytypes.ErrorChainReaderUnsupported{}
 		// until chain reader is not the default, this should be logged as info here
@@ -32,7 +43,7 @@ func newChainReader(lggr logger.Logger, chain evm.Chain, relayConfig types.Relay
 		return nil, err
 	}
 
-	return NewChainReaderService(lggr, chain.LogPoller())
+	return NewChainReaderService(lggr, contractID, chain.LogPoller())
 }
 
 func validateChainReaderConfig(cfg types.ChainReaderConfig) error {
@@ -153,13 +164,14 @@ type ChainReaderService interface {
 }
 
 type chainReader struct {
-	lggr logger.Logger
-	lp   logpoller.LogPoller
+	lggr       logger.Logger
+	contractID common.Address
+	lp         logpoller.LogPoller
 }
 
 // chainReader constructor
-func NewChainReaderService(lggr logger.Logger, lp logpoller.LogPoller) (*chainReader, error) {
-	return &chainReader{lggr.Named("ChainReader"), lp}, nil
+func NewChainReaderService(lggr logger.Logger, contractID common.Address, lp logpoller.LogPoller) (*chainReader, error) {
+	return &chainReader{lggr.Named("ChainReader"), contractID, lp}, nil
 }
 
 func (cr *chainReader) Encode(ctx context.Context, item any, itemType string) (ocrtypes.Report, error) {

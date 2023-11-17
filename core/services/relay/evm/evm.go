@@ -526,7 +526,7 @@ func (r *Relayer) NewMedianProvider(rargs relaytypes.RelayArgs, pargs relaytypes
 		medianContract:      medianContract,
 	}
 
-	chainReader, err := newChainReader(lggr, r.chain, relayConfig)
+	chainReader, err := newChainReader(lggr, r.chain, relayOpts)
 	if err != nil {
 		medianProvider.chainReader = nil
 	} else {
