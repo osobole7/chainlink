@@ -190,9 +190,7 @@ func (r *Relayer) NewMercuryProvider(rargs relaytypes.RelayArgs, pargs relaytype
 	}
 	transmitter := mercury.NewTransmitter(lggr, cw.ContractConfigTracker(), client, privKey.PublicKey, rargs.JobID, *relayConfig.FeedID, r.db, r.pgCfg, transmitterCodec)
 
-	chainReader := NewChainReader(r.chain.HeadTracker())
-	return NewMercuryProvider(cw, r.chainReader, transmitter, reportCodecV1, reportCodecV2, reportCodecV3, chainReader, lggr), nil
-
+	return NewMercuryProvider(cw, r.chainReader, NewMercuryChainReader(r.chain.HeadTracker()), transmitter, reportCodecV1, reportCodecV2, reportCodecV3, lggr), nil
 }
 
 func (r *Relayer) NewFunctionsProvider(rargs relaytypes.RelayArgs, pargs relaytypes.PluginArgs) (relaytypes.FunctionsProvider, error) {
