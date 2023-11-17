@@ -65,10 +65,10 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.9
 	github.com/shopspring/decimal v1.3.1
 	github.com/smartcontractkit/caigo v0.0.0-20230621050857-b29a4ca8c704
-	github.com/smartcontractkit/chainlink-cosmos v0.0.0-20231102020720-36bfe1e78327
-	github.com/smartcontractkit/chainlink-relay v0.0.0-20231107215547-ee2e975fb9d9
-	github.com/smartcontractkit/chainlink-solana v0.0.0-20231101173529-89dcfddba1e5
-	github.com/smartcontractkit/chainlink-starknet/relayer v0.0.0-20231102015854-0056a86b5f79
+	github.com/smartcontractkit/chainlink-cosmos v0.4.1-0.20231102020720-36bfe1e78327
+	github.com/smartcontractkit/chainlink-relay v0.1.7-0.20231116201357-0fa60455c331
+	github.com/smartcontractkit/chainlink-solana v1.0.3-0.20231101173529-89dcfddba1e5
+	github.com/smartcontractkit/chainlink-starknet/relayer v0.0.1-beta-test.0.20231102015854-0056a86b5f79
 	github.com/smartcontractkit/libocr v0.0.0-20231107151413-13e0202ae8d7
 	github.com/smartcontractkit/ocr2keepers v0.7.28
 	github.com/smartcontractkit/ocr2vrf v0.0.0-20230804151440-2f1eb1e20687
@@ -101,6 +101,11 @@ require (
 	gopkg.in/guregu/null.v2 v2.1.2
 	gopkg.in/guregu/null.v4 v4.0.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+)
+
+require (
+	github.com/go-json-experiment/json v0.0.0-20231102232822-2e55bd4e08b0 // indirect
+	github.com/smartcontractkit/sqlx v1.3.5-0.20210805004948-4be295aacbeb // indirect
 )
 
 require (
