@@ -43,7 +43,7 @@ type ChainReaderDefinition struct {
 	Params            map[string]any `json:"params"`
 	ReturnValues      []string       `json:"returnValues"`
 	CacheEnabled      bool           `json:"cacheEnabled"`
-	ReadType          `json:"readType"`
+	ReadType	ReadType          `json:"readType"`
 }
 
 type ReadType int64
