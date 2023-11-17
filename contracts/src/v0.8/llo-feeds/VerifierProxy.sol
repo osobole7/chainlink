@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import {ConfirmedOwner} from "../shared/access/ConfirmedOwner.sol";
+import {TypeAndVersionInterface} from "../interfaces/TypeAndVersionInterface.sol";
 import {IVerifierProxy} from "./interfaces/IVerifierProxy.sol";
 import {IVerifier} from "./interfaces/IVerifier.sol";
-import {TypeAndVersionInterface} from "../interfaces/TypeAndVersionInterface.sol";
-import {AccessControllerInterface} from "../shared/interfaces/AccessControllerInterface.sol";
-import {IERC165} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC165.sol";
 import {IVerifierFeeManager} from "./interfaces/IVerifierFeeManager.sol";
-import {Common} from "./libraries/Common.sol";
 
-/**
- * The verifier proxy contract is the gateway for all report verification requests
- * on a chain.  It is responsible for taking in a verification request and routing
- * it to the correct verifier contract.
- */
-contract VerifierProxy is IVerifierProxy, ConfirmedOwner, TypeAndVersionInterface {
+import {Common} from "./libraries/Common.sol";
+import {OwnerIsCreator} from "../shared/access/OwnerIsCreator.sol";
+import {AccessControllerInterface} from "../shared/interfaces/AccessControllerInterface.sol";
+
+import {IERC165} from "../vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC165.sol";
+
+/// @notice The verifier proxy contract is the gateway for all report verification
+/// requests on a chain. It is responsible for taking in a verification request
+/// and routing it to the correct verifier contract.
+contract VerifierProxy is IVerifierProxy, OwnerIsCreator, TypeAndVersionInterface {
   /// @notice This event is emitted whenever a new verifier contract is set
   /// @param oldConfigDigest The config digest that was previously the latest config
   /// digest of the verifier contract at the verifier address.
@@ -88,7 +88,7 @@ contract VerifierProxy is IVerifierProxy, ConfirmedOwner, TypeAndVersionInterfac
   /// @notice The contract to control fees for report verification
   IVerifierFeeManager public s_feeManager;
 
-  constructor(AccessControllerInterface accessController) ConfirmedOwner(msg.sender) {
+  constructor(AccessControllerInterface accessController) OwnerIsCreator() {
     s_accessController = accessController;
   }
 
@@ -98,20 +98,9 @@ contract VerifierProxy is IVerifierProxy, ConfirmedOwner, TypeAndVersionInterfac
     _;
   }
 
-  modifier onlyInitializedVerifier() {
-    if (!s_initializedVerifiers[msg.sender]) revert AccessForbidden();
-    _;
-  }
-
   modifier onlyValidVerifier(address verifierAddress) {
     if (verifierAddress == address(0)) revert ZeroAddress();
     if (!IERC165(verifierAddress).supportsInterface(IVerifier.verify.selector)) revert VerifierInvalid();
-    _;
-  }
-
-  modifier onlyUnsetConfigDigest(bytes32 configDigest) {
-    address configDigestVerifier = s_verifiersByConfig[configDigest];
-    if (configDigestVerifier != address(0)) revert ConfigDigestAlreadySet(configDigest, configDigestVerifier);
     _;
   }
 
@@ -178,7 +167,11 @@ contract VerifierProxy is IVerifierProxy, ConfirmedOwner, TypeAndVersionInterfac
     bytes32 currentConfigDigest,
     bytes32 newConfigDigest,
     Common.AddressAndWeight[] calldata addressesAndWeights
-  ) external override onlyUnsetConfigDigest(newConfigDigest) onlyInitializedVerifier {
+  ) external override {
+    address configDigestVerifier = s_verifiersByConfig[newConfigDigest];
+    if (configDigestVerifier != address(0)) revert ConfigDigestAlreadySet(newConfigDigest, configDigestVerifier);
+    if (!s_initializedVerifiers[msg.sender]) revert AccessForbidden();
+
     s_verifiersByConfig[newConfigDigest] = msg.sender;
 
     // Empty recipients array will be ignored and must be set off chain
