@@ -22,7 +22,7 @@ func newChainReader(lggr logger.Logger, chain evm.Chain, relayConfig types.Relay
 	if relayConfig.ChainReader == nil {
 		err := relaytypes.ErrorChainReaderUnsupported{}
 		// until chain reader is not the default, this should be logged as info here
-		lggr.Infow(err.Error())
+		lggr.Info(err.Error())
 		return nil, relaytypes.ErrorChainReaderUnsupported{}
 	}
 
