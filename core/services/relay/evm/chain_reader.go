@@ -28,7 +28,7 @@ func newChainReader(lggr logger.Logger, chain evm.Chain, relayConfig types.Relay
 
 	if err := validateChainReaderConfig(*relayConfig.ChainReader); err != nil {
 		err = fmt.Errorf("%w: %w", relaytypes.ErrorChainReaderInvalidConfig{}, err)
-		lggr.Errorw(err.Error())
+		lggr.Error(err.Error())
 		return nil, err
 	}
 
