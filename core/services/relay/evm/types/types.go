@@ -13,9 +13,9 @@ import (
 
 	ocrtypes "github.com/smartcontractkit/libocr/offchainreporting2plus/types"
 
-	"github.com/smartcontractkit/chainlink-relay/pkg/services"
-	"github.com/smartcontractkit/chainlink-relay/pkg/types"
-	relaytypes "github.com/smartcontractkit/chainlink-relay/pkg/types"
+	"github.com/smartcontractkit/chainlink-common/pkg/services"
+	"github.com/smartcontractkit/chainlink-common/pkg/types"
+	commontypes "github.com/smartcontractkit/chainlink-common/pkg/types"
 
 	"github.com/smartcontractkit/chainlink/v2/core/utils"
 )
@@ -43,7 +43,7 @@ type ChainReaderDefinition struct {
 	Params            map[string]any `json:"params"`
 	ReturnValues      []string       `json:"returnValues"`
 	CacheEnabled      bool           `json:"cacheEnabled"`
-	ReadType	ReadType          `json:"readType"`
+	ReadType          ReadType       `json:"readType"`
 }
 
 type ReadType int64
@@ -65,6 +65,13 @@ type RelayConfig struct {
 
 	// Mercury-specific
 	FeedID *common.Hash `json:"feedID"`
+}
+
+type RelayOpts struct {
+	// TODO BCF-2508 -- should anyone ever get the raw config bytes that are embedded in args? if not,
+	// make this private and wrap the arg fields with funcs on RelayOpts
+	commontypes.RelayArgs
+	c *RelayConfig
 }
 
 var ErrBadRelayConfig = errors.New("bad relay config")
@@ -98,9 +105,9 @@ type ConfigPoller interface {
 	Replay(ctx context.Context, fromBlock int64) error
 }
 
-// TODO(FUN-668): Migrate this fully into relaytypes.FunctionsProvider
+// TODO(FUN-668): Migrate this fully into commontypes.FunctionsProvider
 type FunctionsProvider interface {
-	relaytypes.FunctionsProvider
+	commontypes.FunctionsProvider
 	LogPollerWrapper() LogPollerWrapper
 }
 
